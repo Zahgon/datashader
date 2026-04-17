@@ -61,14 +61,11 @@ class Mono(metaclass=Type):
 
     @property
     def _slotted(self):
-        return hasattr(self, '__slots__')
+        pass
 
     @property
     def parameters(self):
-        if self._slotted:
-            return tuple(getattr(self, slot) for slot in self.__slots__)
-        else:
-            return self._parameters
+        pass
 
     def info(self):
         return type(self), self.parameters
@@ -90,7 +87,7 @@ class Mono(metaclass=Type):
 
     @property
     def shape(self):
-        return ()
+        pass
 
     def __len__(self):
         return 1
@@ -113,7 +110,7 @@ class Mono(metaclass=Type):
     # Monotypes are their own measure
     @property
     def measure(self):
-        return self
+        pass
 
     def subarray(self, leading):
         """Returns a data shape object of the subarray with 'leading'
@@ -282,15 +279,7 @@ def normalize_time_unit(s):
     >>> normalize_time_unit('nanosecond')
     'ns'
     """
-    s = s.strip()
-    if s in _units:
-        return s
-    if s in _unit_aliases:
-        return _unit_aliases[s]
-    if s[-1] == 's' and len(s) > 2:
-        return normalize_time_unit(s.rstrip('s'))
-
-    raise ValueError(f"Do not understand time unit {s}")
+    pass
 
 
 class TimeDelta(Unit):
@@ -565,11 +554,11 @@ class DataShape(Mono):
 
     @property
     def shape(self):
-        return self.parameters[:-1]
+        pass
 
     @property
     def measure(self):
-        return self.parameters[-1]
+        pass
 
     def subarray(self, leading):
         """Returns a data shape object of the subarray with 'leading'
@@ -596,7 +585,7 @@ class DataShape(Mono):
 
     @property
     def subshape(self):
-        return IndexCallable(self._subshape)
+        pass
 
     def _subshape(self, index):
         """ The DataShape of an indexed subarray
@@ -635,60 +624,7 @@ class DataShape(Mono):
         >>> print(ds.subshape[0, 1:])
         {amount: int32, id: int32}
         """
-        from .predicates import isdimension
-        if isinstance(index, int) and isdimension(self[0]):
-            return self.subarray(1)
-        if isinstance(self[0], Record) and isinstance(index, str):
-            return self[0][index]
-        if isinstance(self[0], Record) and isinstance(index, int):
-            return self[0].parameters[0][index][1]
-        if isinstance(self[0], Record) and isinstance(index, list):
-            rec = self[0]
-            # Translate strings to corresponding integers
-            index = [self[0].names.index(i) if isinstance(i, str) else i
-                     for i in index]
-            return DataShape(Record([rec.parameters[0][i] for i in index]))
-        if isinstance(self[0], Record) and isinstance(index, slice):
-            rec = self[0]
-            return DataShape(Record(rec.parameters[0][index]))
-        if isinstance(index, list) and isdimension(self[0]):
-            return len(index) * self.subarray(1)
-        if isinstance(index, slice):
-            if isinstance(self[0], Fixed):
-                n = int(self[0])
-                start = index.start or 0
-                stop = index.stop or n
-                if start < 0:
-                    start = n + start
-                if stop < 0:
-                    stop = n + stop
-                count = stop - start
-            else:
-                start = index.start or 0
-                stop = index.stop
-                if not stop:
-                    count = -start if start < 0 else var
-                if (stop is not None and start is not None and stop >= 0 and
-                        start >= 0):
-                    count = stop - start
-                else:
-                    count = var
-
-            if count != var and index.step is not None:
-                count = int(ceil(count / index.step))
-
-            return count * self.subarray(1)
-        if isinstance(index, tuple):
-            if not index:
-                return self
-            elif index[0] is None:
-                return 1 * self._subshape(index[1:])
-            elif len(index) == 1:
-                return self._subshape(index[0])
-            else:
-                ds = self.subarray(1)._subshape(index[1:])
-                return (self[0] * ds)._subshape(index[0])
-        raise TypeError(f'invalid index value {index} of type {type(index).__name__!r}')
+        pass
 
     def __setstate__(self, state):
         self._parameters = state
@@ -712,11 +648,11 @@ class Option(Mono):
 
     @property
     def shape(self):
-        return self.ty.shape
+        pass
 
     @property
     def itemsize(self):
-        return self.ty.itemsize
+        pass
 
     def __str__(self):
         return f'?{self.ty}'
@@ -777,7 +713,7 @@ class CType(Unit):
     @property
     def itemsize(self):
         """The size of one element of this type."""
-        return self._itemsize
+        pass
 
     @property
     def alignment(self):
@@ -866,11 +802,11 @@ class Function(Mono):
     """
     @property
     def restype(self):
-        return self.parameters[-1]
+        pass
 
     @property
     def argtypes(self):
-        return self.parameters[:-1]
+        pass
 
     def __str__(self):
         args = ', '.join(map(str, self.argtypes))
@@ -904,15 +840,7 @@ def _launder(x):
     >>> _launder(Fixed(5))  # No-op on valid parameters
     Fixed(val=5)
     """
-    if isinstance(x, int):
-        x = Fixed(x)
-    if isinstance(x, str):
-        x = datashape.dshape(x)
-    if isinstance(x, DataShape) and len(x) == 1:
-        return x[0]
-    if isinstance(x, Mono):
-        return x
-    return x
+    pass
 
 
 class CollectionPrinter:
@@ -926,29 +854,7 @@ class CollectionPrinter:
 class RecordMeta(Type):
     @staticmethod
     def _unpack_slice(s, idx):
-        if not isinstance(s, slice):
-            raise TypeError(
-                f'invalid field specification at position {idx}.\n'
-                'fields must be formatted like: {name}:{type}'
-            )
-
-        name, type_ = packed = s.start, s.stop
-        if name is None:
-            raise TypeError(f'missing field name at position {idx}')
-        if not isinstance(name, str):
-            raise TypeError(
-                f"field name at position {idx} ('{name}') was not a string",
-            )
-        if type_ is None and s.step is None:
-            raise TypeError(
-                f"missing type for field '{name}' at position {idx}")
-        if s.step is not None:
-            raise TypeError(
-                f"unexpected slice step for field '{name}' at position {idx}.\n"
-                "hint: you might have a second ':'"
-            )
-
-        return packed
+        pass
 
     def __getitem__(self, types):
         if not isinstance(types, tuple):
@@ -1006,19 +912,19 @@ class Record(CollectionPrinter, Mono, metaclass=RecordMeta):
 
     @property
     def fields(self):
-        return self._parameters[0]
+        pass
 
     @property
     def dict(self):
-        return dict(self.fields)
+        pass
 
     @property
     def names(self):
-        return [n for n, t in self.fields]
+        pass
 
     @property
     def types(self):
-        return [t for n, t in self.fields]
+        pass
 
     def to_numpy_dtype(self):
         """
@@ -1038,10 +944,7 @@ R = Record  # Alias for record literals
 
 
 def _format_categories(cats, n=10):
-    return '[{}{}]'.format(
-        ', '.join(map(repr, cats[:n])),
-        ', ...' if len(cats) > n else ''
-    )
+    pass
 
 
 class Categorical(Mono):
@@ -1298,10 +1201,7 @@ def from_numpy(shape, dt):
 
 
 def print_unicode_string(s):
-    try:
-        return s.decode('unicode_escape').encode('ascii')
-    except AttributeError:
-        return s
+    pass
 
 
 def pprint(ds, width=80):
@@ -1355,36 +1255,4 @@ def pprint(ds, width=80):
       }
     >>>
     '''
-    result = ''
-
-    if isinstance(ds, DataShape):
-        if ds.shape:
-            result += ' * '.join(map(str, ds.shape))
-            result += ' * '
-        ds = ds[-1]
-
-    if isinstance(ds, Record):
-        pairs = ['{}: {}'.format(name if isidentifier(name) else
-                             repr(print_unicode_string(name)),
-                             pprint(typ, width - len(result) - len(name)))
-                 for name, typ in zip(ds.names, ds.types)]
-        short = '{%s}' % ', '.join(pairs)  # noqa: UP031
-
-        if len(result + short) < width:
-            return result + short
-        else:
-            long = '{{\n{}\n}}'.format(',\n'.join(pairs))
-            return result + long.replace('\n', '\n  ')
-
-    elif isinstance(ds, Tuple):
-        types = [pprint(typ, width-len(result))
-                for typ in ds.dshapes]
-        short = '({})'.format(', '.join(types))
-        if len(result + short) < width:
-            return result + short
-        else:
-            long = '(\n{}\n)'.format(',\n'.join(types))
-            return result + long.replace('\n', '\n  ')
-    else:
-        result += str(ds)
-    return result
+    pass

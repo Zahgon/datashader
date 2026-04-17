@@ -27,11 +27,11 @@ class _AreaToLineLike(Glyph):
 
     @property
     def ndims(self):
-        return 1
+        pass
 
     @property
     def inputs(self):
-        return (self.x, self.y, self.y_stack)
+        pass
 
     def validate(self, in_dshape):
         if not isreal(in_dshape.measure[str(self.x)]):
@@ -43,11 +43,11 @@ class _AreaToLineLike(Glyph):
 
     @property
     def x_label(self):
-        return self.x
+        pass
 
     @property
     def y_label(self):
-        return self.y
+        pass
 
     def required_columns(self):
         return self.x, self.y, self.y_stack
@@ -231,11 +231,11 @@ class AreaToZeroAxis0Multi(_PointLike):
 
     @property
     def x_label(self):
-        return 'x'
+        pass
 
     @property
     def y_label(self):
-        return 'y'
+        pass
 
     def required_columns(self):
         return self.x + self.y
@@ -326,11 +326,11 @@ class AreaToLineAxis0Multi(_AreaToLineLike):
 
     @property
     def x_label(self):
-        return 'x'
+        pass
 
     @property
     def y_label(self):
-        return 'y'
+        pass
 
     def required_columns(self):
         return self.x + self.y + self.y_stack
@@ -430,11 +430,11 @@ class AreaToZeroAxis1(_PointLike):
 
     @property
     def x_label(self):
-        return 'x'
+        pass
 
     @property
     def y_label(self):
-        return 'y'
+        pass
 
     def compute_x_bounds(self, df):
         xs = tuple(df[xlabel] for xlabel in self.x)
@@ -544,11 +544,11 @@ class AreaToLineAxis1(_AreaToLineLike):
 
     @property
     def x_label(self):
-        return 'x'
+        pass
 
     @property
     def y_label(self):
-        return 'y'
+        pass
 
     def compute_x_bounds(self, df):
         xs = tuple(df[xlabel] for xlabel in self.x)
@@ -1422,12 +1422,7 @@ def _build_extend_area_to_zero_axis0(
             sx, tx, sy, ty, xmin, xmax, ymin, ymax,
             plot_start, xs, ys, *aggs_and_cols
     ):
-        i = cuda.grid(1)
-        if i < xs.shape[0] - 1:
-            perform_extend(
-                i, sx, tx, sy, ty, xmin, xmax, ymin, ymax,
-                plot_start, xs, ys, *aggs_and_cols
-            )
+        pass
 
     return extend_cpu, extend_cuda
 
@@ -1477,12 +1472,7 @@ def _build_extend_area_to_line_axis0(
             sx, tx, sy, ty, xmin, xmax, ymin, ymax,
             plot_start, xs, ys0, ys1, *aggs_and_cols
     ):
-        i = cuda.grid(1)
-        if i < xs.shape[0] - 1:
-            perform_extend(
-                i, sx, tx, sy, ty, xmin, xmax, ymin, ymax,
-                plot_start, xs, ys0, ys1, *aggs_and_cols
-            )
+        pass
 
     return extend_cpu, extend_cuda
 
@@ -1531,12 +1521,7 @@ def _build_extend_area_to_zero_axis0_multi(
             sx, tx, sy, ty, xmin, xmax, ymin, ymax,
             plot_start, xs, ys, *aggs_and_cols
     ):
-        i, j = cuda.grid(2)
-        if i < xs.shape[0] - 1 and j < xs.shape[1]:
-            perform_extend(
-                i, j, sx, tx, sy, ty, xmin, xmax, ymin, ymax,
-                plot_start, xs, ys, *aggs_and_cols
-            )
+        pass
 
     return extend_cpu, extend_cuda
 
@@ -1587,12 +1572,7 @@ def _build_extend_area_to_line_axis0_multi(
             sx, tx, sy, ty, xmin, xmax, ymin, ymax,
             plot_start, xs, ys0, ys1, *aggs_and_cols
     ):
-        i, j = cuda.grid(2)
-        if i < xs.shape[0] - 1 and j < xs.shape[1]:
-            perform_extend(
-                i, j, sx, tx, sy, ty, xmin, xmax, ymin, ymax,
-                plot_start, xs, ys0, ys1, *aggs_and_cols
-            )
+        pass
 
     return extend_cpu, extend_cuda
 
@@ -1641,12 +1621,7 @@ def _build_extend_area_to_zero_axis1_none_constant(
     def extend_cuda(
             sx, tx, sy, ty, xmin, xmax, ymin, ymax, xs, ys, *aggs_and_cols
     ):
-        i, j = cuda.grid(2)
-        if i < xs.shape[0] and j < xs.shape[1] - 1:
-            perform_extend(
-                i, j, sx, tx, sy, ty, xmin, xmax, ymin, ymax,
-                xs, ys, *aggs_and_cols
-            )
+        pass
 
     return extend_cpu, extend_cuda
 
@@ -1701,12 +1676,7 @@ def _build_extend_area_to_line_axis1_none_constant(
             sx, tx, sy, ty, xmin, xmax, ymin, ymax,
             xs, ys0, ys1, *aggs_and_cols
     ):
-        i, j = cuda.grid(2)
-        if i < xs.shape[0] and j < xs.shape[1] - 1:
-            perform_extend(
-                i, j, sx, tx, sy, ty, xmin, xmax, ymin, ymax,
-                xs, ys0, ys1, *aggs_and_cols
-            )
+        pass
 
     return extend_cpu, extend_cuda
 
@@ -1755,12 +1725,7 @@ def _build_extend_area_to_zero_axis1_x_constant(
     def extend_cuda(
             sx, tx, sy, ty, xmin, xmax, ymin, ymax, xs, ys, *aggs_and_cols
     ):
-        i, j = cuda.grid(2)
-        if i < ys.shape[0] and j < ys.shape[1] - 1:
-            perform_extend(
-                i, j, sx, tx, sy, ty, xmin, xmax, ymin, ymax,
-                xs, ys, *aggs_and_cols
-            )
+        pass
 
     return extend_cpu, extend_cuda
 
@@ -1812,12 +1777,7 @@ def _build_extend_area_to_line_axis1_x_constant(
             sx, tx, sy, ty, xmin, xmax, ymin, ymax,
             xs, ys0, ys1, *aggs_and_cols
     ):
-        i, j = cuda.grid(2)
-        if i < ys0.shape[0] and j < ys0.shape[1] - 1:
-            perform_extend(
-                i, j, sx, tx, sy, ty, xmin, xmax, ymin, ymax,
-                xs, ys0, ys1, *aggs_and_cols
-            )
+        pass
 
     return extend_cpu, extend_cuda
 
@@ -1867,12 +1827,7 @@ def _build_extend_area_to_zero_axis1_y_constant(
     def extend_cuda(
             sx, tx, sy, ty, xmin, xmax, ymin, ymax, xs, ys, *aggs_and_cols
     ):
-        i, j = cuda.grid(2)
-        if i < xs.shape[0] and j < xs.shape[1] - 1:
-            perform_extend(
-                i, j, sx, tx, sy, ty, xmin, xmax, ymin, ymax,
-                xs, ys, *aggs_and_cols
-            )
+        pass
 
     return extend_cpu, extend_cuda
 
@@ -1926,12 +1881,7 @@ def _build_extend_area_to_line_axis1_y_constant(
             sx, tx, sy, ty, xmin, xmax, ymin, ymax,
             xs, ys0, ys1, *aggs_and_cols
     ):
-        i, j = cuda.grid(2)
-        if i < xs.shape[0] and j < xs.shape[1] - 1:
-            perform_extend(
-                i, j, sx, tx, sy, ty, xmin, xmax, ymin, ymax,
-                xs, ys0, ys1, *aggs_and_cols
-            )
+        pass
 
     return extend_cpu, extend_cuda
 

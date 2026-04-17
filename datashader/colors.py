@@ -684,6 +684,4 @@ def colormap_select(base_colormap, start=0, end=1.0, reverse=False):
     >>> colormap_select(cmap,0.3,reverse=True)
     ['#d9d9d9', '#969696', '#000000']
     """
-    full = list(reversed(base_colormap) if reverse else base_colormap)
-    num = len(full)
-    return full[int(start*num):int(end*num)]
+    pass

@@ -15,39 +15,31 @@ _is_64bit = (ctypes.sizeof(ctypes.c_void_p) == 8)
 
 def _complex(tp):
     """Simple temporary type constructor for complex"""
-    if tp == ct.DataShape(ct.float32):
-        return ct.complex_float32
-    elif tp == ct.DataShape(ct.float64):
-        return ct.complex_float64
-    else:
-        raise TypeError(
-            f'Cannot construct a complex type with real component {tp}')
+    pass
 
 
 def _struct(names, dshapes):
     """Simple temporary type constructor for struct"""
-    return ct.Record(list(zip(names, dshapes)))
+    pass
 
 
 def _funcproto(args, ret):
     """Simple temporary type constructor for funcproto"""
-    return ct.Function(*chain(args, (ret,)))
+    pass
 
 
 def _typevar_dim(name):
     """Simple temporary type constructor for typevar as a dim"""
-    # Note: Presently no difference between dim and dtype typevar
-    return ct.TypeVar(name)
+    pass
 
 
 def _typevar_dtype(name):
     """Simple temporary type constructor for typevar as a dtype"""
-    # Note: Presently no difference between dim and dtype typevar
-    return ct.TypeVar(name)
+    pass
 
 
 def _ellipsis(name):
-    return ct.Ellipsis(ct.TypeVar(name))
+    pass
 
 # data types with no type constructor
 no_constructor_types = [
@@ -145,10 +137,7 @@ class TypeSymbolTable:
         """
         Adds all the default datashape types to the symbol table.
         """
-        self.dtype.update(no_constructor_types)
-        self.dtype_constr.update(constructor_types)
-        self.dim.update(dim_no_constructor)
-        self.dim_constr.update(dim_constructor)
+        pass
 
 # Create the default global type symbol table
 sym = TypeSymbolTable()

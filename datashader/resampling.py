@@ -385,19 +385,7 @@ def upsample_2d(src, w, h, method=US_LINEAR, fill_value=None, out=None):
     upsampled : numpy.ndarray or dask.array.Array
         An upsampled version of the *src* array.
     """
-    out = _get_out(out, src, (h, w))
-    if out is None:
-        return src
-    mask, use_mask = _get_mask(src)
-    fill_value = _get_fill_value(fill_value, src, out)
-
-    if method not in UPSAMPLING_METHODS:
-        raise ValueError('invalid upsampling method')
-
-    upsampling_method = UPSAMPLING_METHODS[method]
-    upsampled = upsampling_method(
-        src, mask, use_mask, fill_value, (0, 0), (0, 0), out)
-    return _mask_or_not(upsampled, src, fill_value)
+    pass
 
 
 def downsample_2d(src, w, h, method=DS_MEAN, fill_value=None, mode_rank=1, out=None):
@@ -433,22 +421,7 @@ def downsample_2d(src, w, h, method=DS_MEAN, fill_value=None, mode_rank=1, out=N
     downsampled : numpy.ndarray or dask.array.Array
         An downsampled version of the *src* array.
     """
-    if method == DS_MODE and mode_rank < 1:
-        raise ValueError('mode_rank must be >= 1')
-    out = _get_out(out, src, (h, w))
-    if out is None:
-        return src
-    mask, use_mask = _get_mask(src)
-    fill_value = _get_fill_value(fill_value, src, out)
-
-    if method not in DOWNSAMPLING_METHODS:
-        raise ValueError('invalid downsampling method')
-
-    downsampling_method = DOWNSAMPLING_METHODS[method]
-    downsampled = downsampling_method(
-        src, mask, use_mask, method, fill_value, mode_rank, (0, 0),
-        (0, 0), out)
-    return _mask_or_not(downsampled, src, fill_value)
+    pass
 
 
 def _get_out(out, src, shape):
@@ -559,103 +532,12 @@ def _resample_2d(src, mask, use_mask, ds_method, us_method, fill_value,
 
 @ngjit_parallel
 def _upsample_2d_nearest(src, mask, use_mask, fill_value, x_offset, y_offset, out):
-    src_w, src_h, out_w, out_h = _get_dimensions(src, out)
-    x0_off, x1_off = x_offset
-    y0_off, y1_off = y_offset
-    src_w = (src_w - x0_off - x1_off)
-    src_h = (src_h - y0_off - y1_off)
-
-    if src_w == out_w and src_h == out_h:
-        return src
-
-    if out_w < src_w or out_h < src_h:
-        raise ValueError("invalid target size")
-
-    scale_x = src_w / out_w
-    scale_y = src_h / out_h
-
-    for out_y in prange(out_h):
-        src_y = int((scale_y * out_y) + y0_off)
-        for out_x in range(out_w):
-            src_x = int((scale_x * out_x) + x0_off)
-            value = src[src_y, src_x]
-            if np.isfinite(value) and not (use_mask and mask[src_y, src_x]):
-                out[out_y, out_x] = value
-            else:
-                out[out_y, out_x] = fill_value
-    return out
+    pass
 
 
 @ngjit_parallel
 def _upsample_2d_linear(src, mask, use_mask, fill_value, x_offset, y_offset, out):
-    src_w, src_h, out_w, out_h = _get_dimensions(src, out)
-    x0_off, x1_off = x_offset
-    y0_off, y1_off = y_offset
-    src_wo = (src_w - x0_off - x1_off)
-    src_ho = (src_h - y0_off - y1_off)
-
-    if src_wo == out_w and src_ho == out_h:
-        return src
-
-    if out_w < src_w or out_h < src_h:
-        raise ValueError("invalid target size")
-
-    scale_x = (src_wo - 1.0) / ((out_w - 1.0) if out_w > 1 else 1.0)
-    scale_y = (src_ho - 1.0) / ((out_h - 1.0) if out_h > 1 else 1.0)
-    for out_y in prange(out_h):
-        src_yf = (scale_y * out_y) + y0_off
-        src_y0 = int(src_yf)
-        wy = src_yf - src_y0
-        src_y1 = src_y0 + 1
-        if src_y1 >= src_h:
-            src_y1 = src_y0
-        for out_x in range(out_w):
-            src_xf = (scale_x * out_x) + x0_off
-            src_x0 = int(src_xf)
-            wx = src_xf - src_x0
-            src_x1 = src_x0 + 1
-            if src_x1 >= src_w:
-                src_x1 = src_x0
-            v00 = src[src_y0, src_x0]
-            v01 = src[src_y0, src_x1]
-            v10 = src[src_y1, src_x0]
-            v11 = src[src_y1, src_x1]
-            if use_mask:
-                v00_ok = np.isfinite(v00) and not mask[src_y0, src_x0]
-                v01_ok = np.isfinite(v01) and not mask[src_y0, src_x1]
-                v10_ok = np.isfinite(v10) and not mask[src_y1, src_x0]
-                v11_ok = np.isfinite(v11) and not mask[src_y1, src_x1]
-            else:
-                v00_ok = np.isfinite(v00)
-                v01_ok = np.isfinite(v01)
-                v10_ok = np.isfinite(v10)
-                v11_ok = np.isfinite(v11)
-            if v00_ok and v01_ok and v10_ok and v11_ok:
-                ok = True
-                v0 = v00 + wx * (v01 - v00)
-                v1 = v10 + wx * (v11 - v10)
-                value = v0 + wy * (v1 - v0)
-            elif wx < 0.5:
-                # NEAREST according to weight
-                if wy < 0.5:
-                    ok = v00_ok
-                    value = v00
-                else:
-                    ok = v10_ok
-                    value = v10
-            else:
-                # NEAREST according to weight
-                if wy < 0.5:
-                    ok = v01_ok
-                    value = v01
-                else:
-                    ok = v11_ok
-                    value = v11
-            if ok:
-                out[out_y, out_x] = value
-            else:
-                out[out_y, out_x] = fill_value
-    return out
+    pass
 
 
 UPSAMPLING_METHODS = {US_LINEAR: _upsample_2d_linear,
@@ -665,307 +547,31 @@ UPSAMPLING_METHODS = {US_LINEAR: _upsample_2d_linear,
 @ngjit_parallel
 def _downsample_2d_first_last(src, mask, use_mask, method, fill_value,
                               mode_rank, x_offset, y_offset, out):
-    src_w, src_h, out_w, out_h = _get_dimensions(src, out)
-
-    if src_w == out_w and src_h == out_h:
-        return src
-
-    if out_w > src_w or out_h > src_h:
-        raise ValueError("invalid target size")
-
-    x0_off, x1_off = x_offset
-    y0_off, y1_off = y_offset
-    scale_x = (src_w - x0_off - x1_off) / out_w
-    scale_y = (src_h - y0_off - y1_off) / out_h
-
-    for out_y in prange(out_h):
-        src_yf0 = (scale_y * out_y) + y0_off
-        src_yf1 = src_yf0 + scale_y
-        src_y0 = int(src_yf0)
-        src_y1 = int(src_yf1)
-        wy1 = src_yf1 - src_y1
-        if wy1 < _EPS and src_y1 > src_y0:
-            src_y1 -= 1
-        for out_x in range(out_w):
-            src_xf0 = (scale_x * out_x) + x0_off
-            src_xf1 = src_xf0 + scale_x
-            src_x0 = int(src_xf0)
-            src_x1 = int(src_xf1)
-            wx1 = src_xf1 - src_x1
-            if wx1 < _EPS and src_x1 > src_x0:
-                src_x1 -= 1
-            done = False
-            value = fill_value
-            for src_y in range(src_y0, src_y1 + 1):
-                for src_x in range(src_x0, src_x1 + 1):
-                    v = src[src_y, src_x]
-                    if np.isfinite(v) and not (use_mask and mask[src_y, src_x]):
-                        value = v
-                        if method == DS_FIRST:
-                            done = True
-                            break
-                if done:
-                    break
-            out[out_y, out_x] = value
-    return out
+    pass
 
 
 @ngjit_parallel
 def _downsample_2d_min_max(src, mask, use_mask, method, fill_value,
                            mode_rank, x_offset, y_offset, out):
-    src_w, src_h, out_w, out_h = _get_dimensions(src, out)
-
-    if src_w == out_w and src_h == out_h:
-        return src
-
-    if out_w > src_w or out_h > src_h:
-        raise ValueError("invalid target size")
-
-    x0_off, x1_off = x_offset
-    y0_off, y1_off = y_offset
-    scale_x = (src_w - x0_off - x1_off) / out_w
-    scale_y = (src_h - y0_off - y1_off) / out_h
-
-    for out_y in prange(out_h):
-        src_yf0 = (scale_y * out_y) + y0_off
-        src_yf1 = src_yf0 + scale_y
-        src_y0 = int(src_yf0)
-        src_y1 = int(src_yf1)
-        wy1 = src_yf1 - src_y1
-        if wy1 < _EPS and src_y1 > src_y0:
-            src_y1 -= 1
-        for out_x in range(out_w):
-            src_xf0 = (scale_x * out_x) + x0_off
-            src_xf1 = src_xf0 + scale_x
-            src_x0 = int(src_xf0)
-            src_x1 = int(src_xf1)
-            wx1 = src_xf1 - src_x1
-            if wx1 < _EPS and src_x1 > src_x0:
-                src_x1 -= 1
-            if method == DS_MIN:
-                value = np.inf
-            else:
-                value = -np.inf
-            for src_y in range(src_y0, src_y1 + 1):
-                for src_x in range(src_x0, src_x1 + 1):
-                    v = src[src_y, src_x]
-                    if np.isfinite(v) and not (use_mask and mask[src_y, src_x]):
-                        if method == DS_MIN:
-                            if v < value:
-                                value = v
-                        else:
-                            if v > value:
-                                value = v
-            if np.isfinite(value):
-                out[out_y, out_x] = value
-            else:
-                out[out_y, out_x] = fill_value
-    return out
+    pass
 
 
 @ngjit_parallel
 def _downsample_2d_mode(src, mask, use_mask, method, fill_value,
                         mode_rank, x_offset, y_offset, out):
-    src_w, src_h, out_w, out_h = _get_dimensions(src, out)
-
-    if src_w == out_w and src_h == out_h:
-        return src
-
-    if out_w > src_w or out_h > src_h:
-        raise ValueError("invalid target size")
-
-    x0_off, x1_off = x_offset
-    y0_off, y1_off = y_offset
-    scale_x = (src_w - x0_off - x1_off) / out_w
-    scale_y = (src_h - y0_off - y1_off) / out_h
-
-    max_value_count = ceil(scale_x + 1) * ceil(scale_y + 1)
-    if mode_rank >= max_value_count:
-        raise ValueError("requested mode_rank too large for max_value_count being collected")
-
-    for out_y in prange(out_h):
-        src_yf0 = (scale_y * out_y) + y0_off
-        src_yf1 = src_yf0 + scale_y
-        src_y0 = int(src_yf0)
-        src_y1 = int(src_yf1)
-        wy0 = 1.0 - (src_yf0 - src_y0)
-        wy1 = src_yf1 - src_y1
-        if wy1 < _EPS:
-            wy1 = 1.0
-            if src_y1 > src_y0:
-                src_y1 -= 1
-        for out_x in range(out_w):
-            values = np.zeros((max_value_count,), dtype=src.dtype)
-            frequencies = np.zeros((max_value_count,), dtype=np.uint32)
-
-            src_xf0 = (scale_x * out_x) + x0_off
-            src_xf1 = src_xf0 + scale_x
-            src_x0 = int(src_xf0)
-            src_x1 = int(src_xf1)
-            wx0 = 1.0 - (src_xf0 - src_x0)
-            wx1 = src_xf1 - src_x1
-            if wx1 < _EPS:
-                wx1 = 1.0
-                if src_x1 > src_x0:
-                    src_x1 -= 1
-            value_count = 0
-            for src_y in range(src_y0, src_y1 + 1):
-                wy = wy0 if (src_y == src_y0) else wy1 if (src_y == src_y1) else 1.0
-                for src_x in range(src_x0, src_x1 + 1):
-                    wx = wx0 if (src_x == src_x0) else wx1 if (src_x == src_x1) else 1.0
-                    v = src[src_y, src_x]
-                    if np.isfinite(v) and not (use_mask and mask[src_y, src_x]):
-                        w = wx * wy
-                        found = False
-                        for i in range(value_count):
-                            if v == values[i]:
-                                frequencies[i] += w
-                                found = True
-                                break
-                        if not found:
-                            values[value_count] = v
-                            frequencies[value_count] = w
-                            value_count += 1
-            w_max = -1.
-            value = fill_value
-            if mode_rank == 1:
-                for i in range(value_count):
-                    w = frequencies[i]
-                    if w > w_max:
-                        w_max = w
-                        value = values[i]
-            elif mode_rank <= max_value_count:
-                max_frequencies = np.full(mode_rank, -1.0, dtype=np.float64)
-                indices = np.zeros(mode_rank, dtype=np.int64)
-                for i in range(value_count):
-                    w = frequencies[i]
-                    for j in range(mode_rank):
-                        if w > max_frequencies[j]:
-                            max_frequencies[j] = w
-                            indices[j] = i
-                            break
-                value = values[indices[mode_rank - 1]]
-            out[out_y, out_x] = value
-    return out
+    pass
 
 
 @ngjit_parallel
 def _downsample_2d_mean(src, mask, use_mask, method, fill_value,
                         mode_rank, x_offset, y_offset, out):
-    src_w, src_h, out_w, out_h = _get_dimensions(src, out)
-
-    if src_w == out_w and src_h == out_h:
-        return src
-
-    if out_w > src_w or out_h > src_h:
-        raise ValueError("invalid target size")
-
-    x0_off, x1_off = x_offset
-    y0_off, y1_off = y_offset
-    scale_x = (src_w - x0_off - x1_off) / out_w
-    scale_y = (src_h - y0_off - y1_off) / out_h
-
-    for out_y in prange(out_h):
-        src_yf0 = (scale_y * out_y) + y0_off
-        src_yf1 = (src_yf0 + scale_y)
-        src_y0 = int(src_yf0)
-        src_y1 = int(src_yf1)
-
-        wy0 = 1.0 - (src_yf0 - src_y0)
-        wy1 = src_yf1 - src_y1
-        if wy1 < _EPS:
-            wy1 = 1.0
-            if src_y1 > src_y0:
-                src_y1 -= 1
-        for out_x in range(out_w):
-            src_xf0 = (scale_x * out_x) + x0_off
-            src_xf1 = src_xf0 + scale_x
-            src_x0 = int(src_xf0)
-            src_x1 = int(src_xf1)
-            wx0 = 1.0 - (src_xf0 - src_x0)
-            wx1 = src_xf1 - src_x1
-            if wx1 < _EPS:
-                wx1 = 1.0
-                if src_x1 > src_x0:
-                    src_x1 -= 1
-            v_sum = 0.0
-            w_sum = 0.0
-            for src_y in range(src_y0, src_y1 + 1):
-                wy = wy0 if (src_y == src_y0) else wy1 if (src_y == src_y1) else 1.0
-                for src_x in range(src_x0, src_x1 + 1):
-                    wx = wx0 if (src_x == src_x0) else wx1 if (src_x == src_x1) else 1.0
-                    v = src[src_y, src_x]
-                    if np.isfinite(v) and not (use_mask and mask[src_y, src_x]):
-                        w = wx * wy
-                        v_sum += w * v
-                        w_sum += w
-            if w_sum < _EPS:
-                out[out_y, out_x] = fill_value
-            else:
-                out[out_y, out_x] = v_sum / w_sum
-    return out
+    pass
 
 
 @ngjit_parallel
 def _downsample_2d_std_var(src, mask, use_mask, method, fill_value,
                            mode_rank, x_offset, y_offset, out):
-    src_w, src_h, out_w, out_h = _get_dimensions(src, out)
-
-    if src_w == out_w and src_h == out_h:
-        return src
-
-    if out_w > src_w or out_h > src_h:
-        raise ValueError("invalid target size")
-
-    x0_off, x1_off = x_offset
-    y0_off, y1_off = y_offset
-    scale_x = (src_w - x0_off - x1_off) / out_w
-    scale_y = (src_h - y0_off - y1_off) / out_h
-
-    for out_y in prange(out_h):
-        src_yf0 = (scale_y * out_y) + y0_off
-        src_yf1 = src_yf0 + scale_y
-        src_y0 = int(src_yf0)
-        src_y1 = int(src_yf1)
-        wy0 = 1.0 - (src_yf0 - src_y0)
-        wy1 = src_yf1 - src_y1
-        if wy1 < _EPS:
-            wy1 = 1.0
-            if src_y1 > src_y0:
-                src_y1 -= 1
-        for out_x in range(out_w):
-            src_xf0 = (scale_x * out_x) + x0_off
-            src_xf1 = src_xf0 + scale_x
-            src_x0 = int(src_xf0)
-            src_x1 = int(src_xf1)
-            wx0 = 1.0 - (src_xf0 - src_x0)
-            wx1 = src_xf1 - src_x1
-            if wx1 < _EPS:
-                wx1 = 1.0
-                if src_x1 > src_x0:
-                    src_x1 -= 1
-            v_sum = 0.0
-            w_sum = 0.0
-            wv_sum = 0.0
-            wvv_sum = 0.0
-            for src_y in range(src_y0, src_y1 + 1):
-                wy = wy0 if (src_y == src_y0) else wy1 if (src_y == src_y1) else 1.0
-                for src_x in range(src_x0, src_x1 + 1):
-                    wx = wx0 if (src_x == src_x0) else wx1 if (src_x == src_x1) else 1.0
-                    v = src[src_y, src_x]
-                    if np.isfinite(v) and not (use_mask and mask[src_y, src_x]):
-                        w = wx * wy
-                        v_sum += v
-                        w_sum += w
-                        wv_sum += w * v
-                        wvv_sum += w * v * v
-            if w_sum < _EPS:
-                out[out_y, out_x] = fill_value
-            else:
-                out[out_y, out_x] = (wvv_sum * w_sum - wv_sum * wv_sum) / w_sum / w_sum
-    if method == DS_STD:
-        out = np.sqrt(out)
-    return out
+    pass
 
 
 DOWNSAMPLING_METHODS = {DS_MEAN: _downsample_2d_mean,

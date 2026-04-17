@@ -54,11 +54,7 @@ segment_length_type = nb.types.NamedUniTuple(nb.float64, 3, SegmentLength)
 )
 def distance_between(a, b):
     """Find the Euclidean distance between two points."""
-    diff = a[0] - b[0]
-    result = diff * diff
-    diff = a[1] - b[1]
-    result += diff * diff
-    return result
+    pass
 
 @nb.jit(
     nb.float32[:,::1](nb.float32[:,::1], nb.float32[:,::1], nb.uint16[::1], nb.int64),
@@ -76,35 +72,7 @@ def distance_between(a, b):
     }
 )
 def resample_segment(segments, new_segments, n_points_to_add, ndims):
-    next_point = np.zeros(ndims, dtype=segments.dtype)
-    current_point = segments[0]
-    pos = 0
-    index = 1
-    while index < len(segments):
-        next_point = segments[index]
-        if (n_points_to_add[index] == 0 and 1 < index < (len(segments) - 2)):
-            # Merge points, because they're too close to each other
-            current_point = (current_point + next_point) / 2
-            new_segments[pos] = current_point
-            pos += 1
-            index += 2
-        elif n_points_to_add[index] > 1:
-            # If points are too far away from each other, linearly place new points
-            points = n_points_to_add[index]
-            step_vector = (next_point - current_point) / points
-            for i in range(points):
-                new_segments[pos] = current_point + (i * step_vector)
-                pos += 1
-            current_point = next_point
-            index += 1
-        else:
-            # Do nothing, everything is good
-            new_segments[pos] = current_point
-            pos += 1
-            current_point = next_point
-            index += 1
-    new_segments[pos] = next_point
-    return new_segments
+    pass
 
 @nb.jit(
     nb.types.Tuple((nb.boolean, nb.uint64, nb.uint16[::1]))(nb.float32[:,::1], segment_length_type),
@@ -120,37 +88,7 @@ def resample_segment(segments, new_segments, n_points_to_add, ndims):
     }
 )
 def calculate_resampling(segments, squared_segment_length):
-    current_point = segments[0]
-    index = 1
-    total = 0
-    any_change = False
-    n_points_to_add = np.zeros(len(segments), dtype=np.uint16)
-    while index < len(segments):
-        next_point = segments[index]
-        distance = distance_between(current_point, next_point)
-        if (distance < squared_segment_length.min and 1 < index < (len(segments) - 2)):
-            # Merge points
-            any_change = True
-            current_point = (current_point + next_point) / 2
-            n_points_to_add[index] = 0
-            total += 1
-            index += 2
-        elif distance > squared_segment_length.max:
-            any_change = True
-            # Linear subsample
-            points = np.uint16(ceil(np.sqrt(distance / squared_segment_length.mean)))
-            n_points_to_add[index] = points
-            total += points
-            current_point = next_point
-            index += 1
-        else:
-            # Do nothing
-            n_points_to_add[index] = 1
-            total += 1
-            current_point = next_point
-            index += 1
-    total += 1
-    return any_change, total, n_points_to_add
+    pass
 
 @nb.jit(
     nb.float32[:, ::1](nb.float32[:, ::1], segment_length_type, nb.int64),
@@ -158,18 +96,11 @@ def calculate_resampling(segments, squared_segment_length):
     nogil=True,
 )
 def resample_edge(segments, squared_segment_length, ndims):
-    change, total_resamples, n_points_to_add = calculate_resampling(segments,
-                                                                    squared_segment_length)
-    if not change:
-        return segments
-    resampled = np.empty((total_resamples, ndims), dtype=np.float32)
-    resample_segment(segments, resampled, n_points_to_add, ndims)
-    return resampled
+    pass
 
 
 def resample_edges(edge_segments, squared_segment_length, ndims):
-    return [resample_edge(segments, squared_segment_length, ndims)
-            for segments in edge_segments]
+    pass
 
 
 @nb.jit(
@@ -186,18 +117,10 @@ def resample_edges(edge_segments, squared_segment_length, ndims):
     }
 )
 def smooth_segment(segments, tension, idx, idy):
-    for _ in range(10):
-        seg_length = len(segments) - 2
-        for i in range(1, seg_length):
-            previous, current, next_point = segments[i - 1], segments[i], segments[i + 1]
-            current[idx] = (((1-tension)*current[idx]) +
-                            (tension*(previous[idx] + next_point[idx]) / 2))
-            current[idy] = (((1-tension)*current[idy]) +
-                            (tension*(previous[idy] + next_point[idy]) / 2))
+    pass
 
 def smooth(edge_segments, tension, idx, idy):
-    for segments in edge_segments:
-        smooth_segment(segments, tension, idx, idy)
+    pass
 
 @nb.jit(
     nb.float32[:,::1](nb.float32[:,::1], nb.float32[:,::1], nb.float32[:,::1], nb.int64, nb.float64,
@@ -209,37 +132,19 @@ def smooth(edge_segments, tension, idx, idy):
 )
 def advect_and_resample(vert, horiz, segments, iterations, accuracy, squared_segment_length,
                         idx, idy, ndims):
-    for it in range(iterations):
-        for i in range(1, len(segments) - 1):
-            x = np.uint16(segments[i, idx] * accuracy)
-            y = np.uint16(segments[i, idy] * accuracy)
-            segments[i, idx] += horiz[x, y] / accuracy
-            segments[i, idy] += vert[x, y] / accuracy
-            segments[i, idx] = max(0, min(segments[i, idx], 1))
-            segments[i, idy] = max(0, min(segments[i, idy], 1))
-
-        if it % 2 == 0:
-            segments = resample_edge(segments, squared_segment_length, ndims)
-    return segments
+    pass
 
 def advect_resample_all(gradients, edge_segments, iterations, accuracy, squared_segment_length,
                         idx, idy, ndims):
-    vert, horiz = gradients
-    return [advect_and_resample(vert, horiz, edges, iterations, accuracy, squared_segment_length,
-                                idx, idy, ndims)
-            for edges in edge_segments]
+    pass
 
 
 def batches(seq, n):
     """Yield successive n-sized batches from seq."""
-    for i in range(0, len(seq), n):
-        yield seq[i:i + n]
+    pass
 
 def draw_to_surface(edge_segments, bandwidth, accuracy, accumulator):
-    img = np.zeros((accuracy + 1, accuracy + 1), dtype=np.float32)
-    for segments in edge_segments:
-        accumulator(img, segments, accuracy)
-    return gaussian(img, sigma=bandwidth / 2)
+    pass
 
 @nb.jit(
     nb.void(nb.float32[:,::1], nb.float32[:,::1]),
@@ -248,26 +153,16 @@ def draw_to_surface(edge_segments, bandwidth, accuracy, accumulator):
     fastmath=True,
 )
 def normalize_gradients(vert, horiz):
-    for i in range(vert.shape[0]):
-        for j in range(vert.shape[1]):
-            magnitude = np.sqrt(horiz[i, j]**2 + vert[i, j]**2) + 1e-5
-            vert[i, j] /= magnitude
-            horiz[i, j] /= magnitude
+    pass
 
 def get_gradients(img):
-    img /= np.max(img)
-
-    horiz = sobel_h(img)
-    vert = sobel_v(img)
-
-    normalize_gradients(vert, horiz)
-    return (vert, horiz)
+    pass
 
 
 class BaseSegment:
     @classmethod
     def create_delimiter(cls):
-        return np.full((1, cls.ndims), np.nan)
+        pass
 
 
 class UnweightedSegment(BaseSegment):
@@ -276,23 +171,21 @@ class UnweightedSegment(BaseSegment):
 
     @staticmethod
     def get_columns(params):
-        return ['edge_id', params.x, params.y]
+        pass
 
     @staticmethod
     def get_merged_columns(params):
-        return ['edge_id', 'src_x', 'src_y', 'dst_x', 'dst_y']
+        pass
 
     @staticmethod
     @ngjit
     def create_segment(edge):
-        return np.array([[edge[0], edge[1], edge[2]], [edge[0], edge[3], edge[4]]],
-                        dtype=np.float32)
+        pass
 
     @staticmethod
     @ngjit
     def accumulate(img, points, accuracy):
-        for point in points:
-            img[int(point[1] * accuracy), int(point[2] * accuracy)] += 1
+        pass
 
 
 class EdgelessUnweightedSegment(BaseSegment):
@@ -301,22 +194,21 @@ class EdgelessUnweightedSegment(BaseSegment):
 
     @staticmethod
     def get_columns(params):
-        return [params.x, params.y]
+        pass
 
     @staticmethod
     def get_merged_columns(params):
-        return ['edge_id', 'src_x', 'src_y', 'dst_x', 'dst_y']
+        pass
 
     @staticmethod
     @ngjit
     def create_segment(edge):
-        return np.array([[edge[0], edge[1]], [edge[2], edge[3]]], dtype=np.float32)
+        pass
 
     @staticmethod
     @ngjit
     def accumulate(img, points, accuracy):
-        for point in points:
-            img[int(point[0] * accuracy), int(point[1] * accuracy)] += 1
+        pass
 
 
 class WeightedSegment(BaseSegment):
@@ -325,23 +217,21 @@ class WeightedSegment(BaseSegment):
 
     @staticmethod
     def get_columns(params):
-        return ['edge_id', params.x, params.y, params.weight]
+        pass
 
     @staticmethod
     def get_merged_columns(params):
-        return ['edge_id', 'src_x', 'src_y', 'dst_x', 'dst_y', params.weight]
+        pass
 
     @staticmethod
     @ngjit
     def create_segment(edge):
-        return np.array([[edge[0], edge[1], edge[2], edge[5]],
-                         [edge[0], edge[3], edge[4], edge[5]]], dtype=np.float32)
+        pass
 
     @staticmethod
     @ngjit
     def accumulate(img, points, accuracy):
-        for point in points:
-            img[int(point[1] * accuracy), int(point[2] * accuracy)] += point[3]
+        pass
 
 
 class EdgelessWeightedSegment(BaseSegment):
@@ -350,23 +240,21 @@ class EdgelessWeightedSegment(BaseSegment):
 
     @staticmethod
     def get_columns(params):
-        return [params.x, params.y, params.weight]
+        pass
 
     @staticmethod
     def get_merged_columns(params):
-        return ['src_x', 'src_y', 'dst_x', 'dst_y', params.weight]
+        pass
 
     @staticmethod
     @ngjit
     def create_segment(edge):
-        return np.array([[edge[0], edge[1], edge[4]], [edge[2], edge[3], edge[4]]],
-                        dtype=np.float32)
+        pass
 
     @staticmethod
     @ngjit
     def accumulate(img, points, accuracy):
-        for point in points:
-            img[int(point[0] * accuracy), int(point[1] * accuracy)] += point[2]
+        pass
 
 
 def _convert_graph_to_edge_segments(nodes, edges, params):
@@ -383,45 +271,7 @@ def _convert_graph_to_edge_segments(nodes, edges, params):
     We also return the dimensions of each point in the final dataframe and
     the accumulator function for drawing to an image.
     """
-
-    df = pd.merge(edges, nodes, left_on=[params.source], right_index=True)
-    df = df.rename(columns={params.x: 'src_x', params.y: 'src_y'})
-
-    df = pd.merge(df, nodes, left_on=[params.target], right_index=True)
-    df = df.rename(columns={params.x: 'dst_x', params.y: 'dst_y'})
-
-    df = df.sort_index()
-    df = df.reset_index()
-
-    include_edge_id = params.include_edge_id
-    if include_edge_id:
-        df = df.rename(columns={'id': 'edge_id'})
-
-    include_weight = params.weight and params.weight in edges
-
-    if include_edge_id:
-        if include_weight:
-            segment_class = WeightedSegment
-        else:
-            segment_class = UnweightedSegment
-    else:
-        if include_weight:
-            segment_class = EdgelessWeightedSegment
-        else:
-            segment_class = EdgelessUnweightedSegment
-
-    df = df.filter(items=segment_class.get_merged_columns(params))
-
-    edge_segments = []
-    for tup in df.itertuples():
-        edge = (tup.src_x, tup.src_y, tup.dst_x, tup.dst_y)
-        if include_edge_id:
-            edge = (tup.edge_id,) + edge
-        if include_weight:
-            edge += (getattr(tup, params.weight),)
-        edge_segments.append(segment_class.create_segment(edge))
-
-    return edge_segments, segment_class
+    pass
 
 
 def _convert_edge_segments_to_dataframe(edge_segments, segment_class, params):
@@ -432,13 +282,7 @@ def _convert_edge_segments_to_dataframe(edge_segments, segment_class, params):
     as successive points separated by a point with NaN as the x or y
     value.
     """
-
-    # Need to put an array of NaNs with size point_dims between edges
-    delimiters = np.full((len(edge_segments), 1, segment_class.ndims), np.nan)
-    combined = list(itertools.chain(*zip(edge_segments, delimiters)))
-    df = DataFrame(np.concatenate(combined))
-    df.columns = segment_class.get_columns(params)
-    return df
+    pass
 
 
 class connect_edges(param.ParameterizedFunction):
@@ -488,11 +332,11 @@ directly_connect_edges = connect_edges # For backwards compatibility; deprecated
 
 
 def minmax_normalize(X, lower, upper):
-    return (X - lower) / (upper - lower)
+    pass
 
 
 def minmax_denormalize(X, lower, upper):
-    return X * (upper - lower) + lower
+    pass
 
 
 class hammer_bundle(connect_edges):

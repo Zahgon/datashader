@@ -16,7 +16,7 @@ __all__ = ['lex', 'Token']
 def _str_val(s):
     # Use the Python parser via the ast module to parse the string,
     # since the string_escape and unicode_escape codecs do the wrong thing
-    return ast.parse('u' + s).body[0].value.value
+    pass
 
 # A list of the token names, corresponding regex, and value extraction function
 _tokens = [
@@ -70,32 +70,4 @@ def lex(ds_str):
         for tok in datashape.lexer.lex(s):
             print(tok.id, tok.name, tok.span, repr(tok.val))
     """
-    pos = 0
-    # Skip whitespace
-    m = _whitespace_re.match(ds_str, pos)
-    if m:
-        pos = m.end()
-    while pos < len(ds_str):
-        # Try to match a token
-        m = _tokens_re.match(ds_str, pos)
-        if m:
-            # m.lastindex gives us which group was matched, which
-            # is one greater than the index into the _tokens list.
-            id = m.lastindex
-            tokinfo = _tokens[id - 1]
-            name = tokinfo[0]
-            span = m.span()
-            if len(tokinfo) > 2:
-                val = tokinfo[2](ds_str[span[0]:span[1]])
-            else:
-                val = None
-            pos = m.end()
-            yield Token(id, name, span, val)
-        else:
-            raise error.DataShapeSyntaxError(pos, '<nofile>',
-                                             ds_str,
-                                             'Invalid DataShape token')
-        # Skip whitespace
-        m = _whitespace_re.match(ds_str, pos)
-        if m:
-            pos = m.end()
+    pass

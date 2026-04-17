@@ -200,36 +200,7 @@ class Canvas:
             Column name of a PointsArray of the coordinates of each point. If provided,
             the x and y arguments may not also be provided.
         """
-        from .glyphs import Point, MultiPointGeometry
-        from .reductions import count as count_rdn
-
-        validate_xy_or_geometry('Point', x, y, geometry)
-
-        if agg is None:
-            agg = count_rdn()
-
-        if geometry is None:
-            glyph = Point(x, y)
-        else:
-            if spatialpandas and isinstance(source, spatialpandas.dask.DaskGeoDataFrame):
-                # Downselect partitions to those that may contain points in viewport
-                x_range = self.x_range if self.x_range is not None else (None, None)
-                y_range = self.y_range if self.y_range is not None else (None, None)
-                source = source.cx_partitions[slice(*x_range), slice(*y_range)]
-                glyph = MultiPointGeometry(geometry)
-            elif spatialpandas and isinstance(source, spatialpandas.GeoDataFrame):
-                glyph = MultiPointGeometry(geometry)
-            elif (geopandas_source := self._source_from_geopandas(source)) is not None:
-                source = geopandas_source
-                from datashader.glyphs.points import MultiPointGeoPandas
-                glyph = MultiPointGeoPandas(geometry)
-            else:
-                raise ValueError(
-                    "source must be an instance of spatialpandas.GeoDataFrame, "
-                    "spatialpandas.dask.DaskGeoDataFrame, geopandas.GeoDataFrame, or "
-                    f"dask_geopandas.GeoDataFrame. Received objects of type {type(source)}")
-
-        return bypixel(source, self, glyph, agg)
+        pass
 
     def line(self, source, x=None, y=None, agg=None, axis=0, geometry=None,
              line_width=0, antialias=False):
@@ -600,113 +571,7 @@ The axis argument to Canvas.line must be 0 or 1
 
         (requires pandas >= 0.24.0)
         """
-        from .glyphs import (
-            AreaToZeroAxis0, AreaToLineAxis0,
-            AreaToZeroAxis0Multi, AreaToLineAxis0Multi,
-            AreaToZeroAxis1, AreaToLineAxis1,
-            AreaToZeroAxis1XConstant, AreaToLineAxis1XConstant,
-            AreaToZeroAxis1YConstant, AreaToLineAxis1YConstant,
-            AreaToZeroAxis1Ragged, AreaToLineAxis1Ragged,
-        )
-        from .reductions import any as any_rdn
-        if agg is None:
-            agg = any_rdn()
-
-        # Broadcast column specifications to handle cases where
-        # x is a list and y is a string or vice versa
-        orig_x, orig_y, orig_y_stack = x, y, y_stack
-        x, y, y_stack = _broadcast_column_specifications(x, y, y_stack)
-
-        if axis == 0:
-            if y_stack is None:
-                if (isinstance(x, (Number, str)) and
-                        isinstance(y, (Number, str))):
-                    glyph = AreaToZeroAxis0(x, y)
-                elif (isinstance(x, (list, tuple)) and
-                      isinstance(y, (list, tuple))):
-                    glyph = AreaToZeroAxis0Multi(tuple(x), tuple(y))
-                else:
-                    raise ValueError(f"""
-Invalid combination of x and y arguments to Canvas.area when axis=0.
-    Received:
-        x: {repr(x)}
-        y: {repr(y)}
-See docstring for more information on valid usage""")
-            else:
-                # y_stack is not None
-                if (isinstance(x, (Number, str)) and
-                        isinstance(y, (Number, str)) and
-                        isinstance(y_stack, (Number, str))):
-
-                    glyph = AreaToLineAxis0(x, y, y_stack)
-                elif (isinstance(x, (list, tuple)) and
-                      isinstance(y, (list, tuple)) and
-                      isinstance(y_stack, (list, tuple))):
-                    glyph = AreaToLineAxis0Multi(
-                        tuple(x), tuple(y), tuple(y_stack))
-                else:
-                    raise ValueError(f"""
-Invalid combination of x, y, and y_stack arguments to Canvas.area when axis=0.
-    Received:
-        x: {repr(orig_x)}
-        y: {repr(orig_y)}
-        y_stack: {repr(orig_y_stack)}
-See docstring for more information on valid usage""")
-
-        elif axis == 1:
-            if y_stack is None:
-                if (isinstance(x, (list, tuple)) and
-                        isinstance(y, (list, tuple))):
-                    glyph = AreaToZeroAxis1(tuple(x), tuple(y))
-                elif (isinstance(x, np.ndarray) and
-                      isinstance(y, (list, tuple))):
-                    glyph = AreaToZeroAxis1XConstant(x, tuple(y))
-                elif (isinstance(x, (list, tuple)) and
-                      isinstance(y, np.ndarray)):
-                    glyph = AreaToZeroAxis1YConstant(tuple(x), y)
-                elif (isinstance(x, (Number, str)) and
-                      isinstance(y, (Number, str))):
-                    glyph = AreaToZeroAxis1Ragged(x, y)
-                else:
-                    raise ValueError(f"""
-Invalid combination of x and y arguments to Canvas.area when axis=1.
-    Received:
-        x: {repr(x)}
-        y: {repr(y)}
-See docstring for more information on valid usage""")
-            else:
-                if (isinstance(x, (list, tuple)) and
-                        isinstance(y, (list, tuple)) and
-                        isinstance(y_stack, (list, tuple))):
-                    glyph = AreaToLineAxis1(
-                        tuple(x), tuple(y), tuple(y_stack))
-                elif (isinstance(x, np.ndarray) and
-                      isinstance(y, (list, tuple)) and
-                      isinstance(y_stack, (list, tuple))):
-                    glyph = AreaToLineAxis1XConstant(
-                        x, tuple(y), tuple(y_stack))
-                elif (isinstance(x, (list, tuple)) and
-                      isinstance(y, np.ndarray) and
-                      isinstance(y_stack, np.ndarray)):
-                    glyph = AreaToLineAxis1YConstant(tuple(x), y, y_stack)
-                elif (isinstance(x, (Number, str)) and
-                      isinstance(y, (Number, str)) and
-                      isinstance(y_stack, (Number, str))):
-                    glyph = AreaToLineAxis1Ragged(x, y, y_stack)
-                else:
-                    raise ValueError(f"""
-Invalid combination of x, y, and y_stack arguments to Canvas.area when axis=1.
-    Received:
-        x: {repr(orig_x)}
-        y: {repr(orig_y)}
-        y_stack: {repr(orig_y_stack)}
-See docstring for more information on valid usage""")
-        else:
-            raise ValueError(f"""
-The axis argument to Canvas.area must be 0 or 1
-    Received: {axis}""")
-
-        return bypixel(source, self, glyph, agg)
+        pass
 
     def polygons(self, source, geometry, agg=None):
         """Compute a reduction by pixel, mapping data to pixels as one or
@@ -754,30 +619,7 @@ The axis argument to Canvas.area must be 0 or 1
         ... agg = cvs.polygons(df, geometry='polygons', agg=ds.sum('v'))
         ... tf.shade(agg)
         """
-        from .glyphs import PolygonGeom
-        from .reductions import any as any_rdn
-
-        if spatialpandas and isinstance(source, spatialpandas.dask.DaskGeoDataFrame):
-            # Downselect partitions to those that may contain polygons in viewport
-            x_range = self.x_range if self.x_range is not None else (None, None)
-            y_range = self.y_range if self.y_range is not None else (None, None)
-            source = source.cx_partitions[slice(*x_range), slice(*y_range)]
-            glyph = PolygonGeom(geometry)
-        elif spatialpandas and isinstance(source, spatialpandas.GeoDataFrame):
-            glyph = PolygonGeom(geometry)
-        elif (geopandas_source := self._source_from_geopandas(source)) is not None:
-            source = geopandas_source
-            from .glyphs.polygon import GeopandasPolygonGeom
-            glyph = GeopandasPolygonGeom(geometry)
-        else:
-            raise ValueError(
-                "source must be an instance of spatialpandas.GeoDataFrame, "
-                "spatialpandas.dask.DaskGeoDataFrame, geopandas.GeoDataFrame or "
-                f"dask_geopandas.GeoDataFrame, not {type(source)}")
-
-        if agg is None:
-            agg = any_rdn()
-        return bypixel(source, self, glyph, agg)
+        pass
 
     def quadmesh(self, source, x=None, y=None, agg=None):
         r"""Samples a raster, rectilinear or curvilinear quadmesh by canvas size and bounds.
@@ -950,42 +792,7 @@ x- and y-coordinate arrays must have 1 or 2 dimensions.
             backwards compatibility, also accepts ``interp=True`` for ``linear``
             and ``interp=False`` for ``nearest``.
         """
-        from .glyphs import Triangles
-        from .reductions import mean as mean_rdn
-        from .utils import mesh as create_mesh
-
-        source = mesh
-
-        # 'interp' argument is deprecated as of datashader=0.6.4
-        if interpolate is not None:
-            if interpolate == 'linear':
-                interp = True
-            elif interpolate == 'nearest':
-                interp = False
-            else:
-                raise ValueError('Invalid interpolate method: options include {}'.format(
-                    ['linear','nearest']))
-
-        # Validation is done inside the [pd]d_mesh utility functions
-        if source is None:
-            source = create_mesh(vertices, simplices)
-
-        verts_have_weights = len(vertices.columns) > 2
-        if verts_have_weights:
-            weight_col = vertices.columns[2]
-        else:
-            weight_col = simplices.columns[3]
-
-        if agg is None:
-            agg = mean_rdn(weight_col)
-        elif agg.column is None:
-            agg.column = weight_col
-
-        cols = source.columns
-        x, y, weights = cols[0], cols[1], cols[2:]
-
-        return bypixel(source, self, Triangles(x, y, weights, weight_type=verts_have_weights,
-                                               interp=interp), agg)
+        pass
 
     def raster(self,
                source,

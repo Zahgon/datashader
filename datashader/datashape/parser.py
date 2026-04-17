@@ -50,7 +50,7 @@ class DataShapeParser:
 
     @property
     def tok(self):
-        return self.tokens[self.pos]
+        pass
 
     def raise_error(self, errmsg):
         raise error.DataShapeSyntaxError(self.tok.span[0], '<nofile>',
@@ -397,21 +397,7 @@ class DataShapeParser:
 
         Returns a (name, type_arg) tuple, or None.
         """
-        if self.tok.id != lexer.NAME_LOWER:
-            return None
-        saved_pos = self.pos
-        name = self.tok.val
-        self.advance_tok()
-        if self.tok.id != lexer.EQUAL:
-            self.pos = saved_pos
-            return None
-        self.advance_tok()
-        arg = self.parse_type_arg()
-        if arg is not None:
-            return (name, arg)
-        else:
-            # After "NAME_LOWER EQUAL", a type_arg is required.
-            self.raise_error('Expected a type constructor argument')
+        pass
 
     def parse_datashape_list(self):
         """
@@ -429,12 +415,7 @@ class DataShapeParser:
         """
         integer : INTEGER
         """
-        if self.tok.id == lexer.INTEGER:
-            val = self.tok.val
-            self.advance_tok()
-            return val
-        else:
-            return None
+        pass
 
     def parse_integer_list(self):
         """
@@ -452,12 +433,7 @@ class DataShapeParser:
         """
         boolean : BOOLEAN
         """
-        if self.tok.id == lexer.BOOLEAN:
-            val = self.tok.val
-            self.advance_tok()
-            return val
-        else:
-            return None
+        pass
 
     def parse_boolean_list(self):
         """
@@ -475,12 +451,7 @@ class DataShapeParser:
         """
         string : STRING
         """
-        if self.tok.id == lexer.STRING:
-            val = self.tok.val
-            self.advance_tok()
-            return val
-        else:
-            return None
+        pass
 
     def parse_string_list(self):
         """
@@ -530,19 +501,7 @@ class DataShapeParser:
 
         Returns a tuple (name, datashape object) or None
         """
-        if self.tok.id not in [lexer.NAME_LOWER, lexer.NAME_UPPER,
-                               lexer.NAME_OTHER, lexer.STRING]:
-            return None
-        name = self.tok.val
-        self.advance_tok()
-        if self.tok.id != lexer.COLON:
-            self.raise_error('Expected a ":" separating the field ' +
-                             'name from its datashape')
-        self.advance_tok()
-        ds = self.parse_datashape()
-        if ds is None:
-            self.raise_error('Expected the datashape of the field')
-        return (name, ds)
+        pass
 
     def parse_funcproto_or_tuple_type(self):
         """

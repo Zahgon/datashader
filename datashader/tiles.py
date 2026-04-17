@@ -22,14 +22,7 @@ __all__ = ['render_tiles', 'MercatorTileDefinition']
 
 # helpers ---------------------------------------------------------------------
 def _create_dir(path):
-    import errno
-    import os
-
-    try:
-        os.makedirs(path)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
+    pass
 
 
 def _get_super_tile_min_max(tile_info, load_data_func, rasterize_func):
@@ -105,29 +98,12 @@ def gen_super_tiles(extent, zoom_level, span=None):
 
 
 def render_super_tile(tile_info, span, output_path, shader_func, post_render_func):
-    level = tile_info['level']
-    ds_img = shader_func(tile_info['agg'], span=span)
-    return create_sub_tiles(ds_img, level, tile_info, output_path, post_render_func)
+    pass
 
 
 def create_sub_tiles(data_array, level, tile_info, output_path, post_render_func=None):
     # validate / createoutput_dir
-    _create_dir(output_path)
-
-    # create tile source
-    tile_def = MercatorTileDefinition(x_range=tile_info['x_range'],
-                                      y_range=tile_info['y_range'],
-                                      tile_size=256)
-
-    # create Tile Renderer
-    if output_path.startswith('s3:'):
-        renderer = S3TileRenderer(tile_def, output_location=output_path,
-                                  post_render_func=post_render_func)
-    else:
-        renderer = FileSystemTileRenderer(tile_def, output_location=output_path,
-                                          post_render_func=post_render_func)
-
-    return renderer.render(data_array, level=level)
+    pass
 
 
 def invert_y_tile(y, z):
@@ -218,25 +194,10 @@ class MercatorTileDefinition:
         return self.initial_resolution / (2 ** z)
 
     def get_resolution_by_extent(self, extent, height, width):
-        x_rs = (extent[2] - extent[0]) / width
-        y_rs = (extent[3] - extent[1]) / height
-        return [x_rs, y_rs]
+        pass
 
     def get_level_by_extent(self, extent, height, width):
-        x_rs = (extent[2] - extent[0]) / width
-        y_rs = (extent[3] - extent[1]) / height
-        resolution = max(x_rs, y_rs)
-
-        # TODO: refactor this...
-        i = 0
-        for r in self._resolutions:
-            if resolution > r:
-                if i == 0:
-                    return 0
-                if i > 0:
-                    return i - 1
-            i += 1
-        return (i - 1)
+        pass
 
     def pixels_to_meters(self, px, py, level):
         res = self._get_resolution(level)
@@ -258,8 +219,7 @@ class MercatorTileDefinition:
         return (int(tx), invert_y_tile(int(ty), level))
 
     def pixels_to_raster(self, px, py, level):
-        map_size = self.tile_size << level
-        return (px, map_size - py)
+        pass
 
     def meters_to_tile(self, mx, my, level):
         px, py = self.meters_to_pixels(mx, my, level)
@@ -308,34 +268,7 @@ class TileRenderer:
             raise ValueError('Invalid output format')
 
     def render(self, da, level):
-        from PIL.Image import fromarray
-
-        xmin, xmax = self.tile_def.x_range
-        ymin, ymax = self.tile_def.y_range
-        extent = xmin, ymin, xmax, ymax
-
-        tiles = self.tile_def.get_tiles_by_extent(extent, level)
-        for t in tiles:
-            x, y, z, data_extent = t
-            dxmin, dymin, dxmax, dymax = data_extent
-            arr = da.loc[{'x': slice(dxmin, dxmax), 'y': slice(dymin, dymax)}]
-
-            if 0 in arr.shape:
-                continue
-
-            # flip since y tiles go down (Google map tiles)
-            data = np.flip(arr.data, 0)
-
-            # Create RGBA view for img
-            if len(data.shape) == 2 and data.dtype == np.uint32:
-               data = uint32_to_uint8(data)
-
-            img = fromarray(data)
-            if self.post_render_func:
-                extras = dict(x=x, y=y, z=z)
-                img = self.post_render_func(img, **extras)
-
-            yield (img, x, y, z)
+        pass
 
 
 def tile_previewer(full_extent, tileset_url,
@@ -353,78 +286,17 @@ def tile_previewer(full_extent, tileset_url,
     - if you don't supply height / width, stretch_both sizing_mode is used.
     - supply an output_dir to write figure to disk.
     '''
-
-    try:
-        from bokeh.plotting import figure
-        from bokeh.models.tiles import WMTSTileSource
-        from bokeh.io import output_file, save
-        from os import path
-    except ImportError:
-        raise ImportError('install bokeh to enable creation of simple tile viewer')
-
-    if output_dir:
-        output_file(filename=path.join(output_dir, filename),
-                    title=title)
-
-    xmin, ymin, xmax, ymax = full_extent
-
-    if height and width:
-        p = figure(width=width, height=height,
-                   x_range=(xmin, xmax),
-                   y_range=(ymin, ymax),
-                   tools="pan,wheel_zoom,reset", **kwargs)
-    else:
-        p = figure(sizing_mode='stretch_both',
-                   x_range=(xmin, xmax),
-                   y_range=(ymin, ymax),
-                   tools="pan,wheel_zoom,reset", **kwargs)
-
-    p.background_fill_color = 'black'
-    p.grid.grid_line_alpha = 0
-    p.axis.visible = True
-
-    tile_source = WMTSTileSource(url=tileset_url,
-                                 min_zoom=min_zoom,
-                                 max_zoom=max_zoom)
-    p.add_tile(tile_source, render_parents=False)
-
-    if output_dir:
-        save(p)
-
-    return p
+    pass
 
 
 class FileSystemTileRenderer(TileRenderer):
 
     def render(self, da, level):
-        for img, x, y, z in super().render(da, level):
-            tile_file_name = f'{y}.{self.tile_format.lower()}'
-            tile_directory = os.path.join(self.output_location, str(z), str(x))
-            output_file = os.path.join(tile_directory, tile_file_name)
-            _create_dir(tile_directory)
-            img.save(output_file, self.tile_format)
+        pass
 
 
 class S3TileRenderer(TileRenderer):
 
     def render(self, da, level):
 
-        try:
-            import boto3
-        except ImportError:
-            raise ImportError('install boto3 to enable rendering to S3')
-
-        from urllib.parse import urlparse
-
-        s3_info = urlparse(self.output_location)
-        bucket = s3_info.netloc
-        client = boto3.client('s3')
-        for img, x, y, z in super().render(da, level):
-            tile_file_name = f'{y}.{self.tile_format.lower()}'
-            key = os.path.join(s3_info.path, str(z), str(x), tile_file_name).lstrip('/')
-            output_buf = BytesIO()
-            img.save(output_buf, self.tile_format)
-            output_buf.seek(0)
-            client.put_object(Body=output_buf, Bucket=bucket, Key=key, ACL='public-read')
-
-        return f'https://{bucket}.s3.amazonaws.com/{s3_info.path}'
+        pass

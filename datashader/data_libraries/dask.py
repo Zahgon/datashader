@@ -192,10 +192,7 @@ def default(glyph, df, schema, canvas, summary, *, antialias=False, cuda=False):
 
     def aggregate(x, axis, keepdims):
         """ Wrap datashader finalize in dask.array.reduction aggregate """
-        return finalize(wrapped_combine(x, axis, keepdims),
-                        cuda=cuda, coords=local_axis,
-                        dims=[glyph.y_label, glyph.x_label],
-                        attrs=dict(x_range=x_range, y_range=y_range))
+        pass
 
     R = da.reduction(df_array,
                      aggregate=aggregate,

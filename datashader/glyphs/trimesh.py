@@ -28,12 +28,11 @@ class _PolygonLike(_PointLike):
 
     @property
     def ndims(self):
-        return None
+        pass
 
     @property
     def inputs(self):
-        return (tuple([self.x, self.y] + list(self.z)) +
-                (self.weight_type, self.interpolate))
+        pass
 
     def validate(self, in_dshape):
         for col in [self.x, self.y] + list(self.z):

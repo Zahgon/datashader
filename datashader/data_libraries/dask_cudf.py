@@ -5,7 +5,7 @@ from datashader.core import bypixel
 
 
 def dask_cudf_pipeline(df, schema, canvas, glyph, summary, *, antialias=False):
-    return dask_pipeline(df, schema, canvas, glyph, summary, antialias=antialias, cuda=True)
+    pass
 
 
 with suppress(ImportError):

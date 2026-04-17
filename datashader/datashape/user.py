@@ -74,7 +74,7 @@ def validate(schema, value):  # noqa: F811
 @validate.register(Date, date)
 @validate.register(DateTime, datetime)
 def validate_always_true(schema, value):
-    return True
+    pass
 
 
 @dispatch(DataShape, np.ndarray)

@@ -16,16 +16,7 @@ __all__ = ('composite_op_lookup', 'validate_operator') + image_operators + array
 
 
 def validate_operator(how, is_image):
-    name = how if is_image else how + '_arr'
-    if is_image:
-        if name not in image_operators:
-            image_repr = ', '.join(repr(el) for el in image_operators)
-            msg =f'Operator {how!r} not one of the supported image operators: {image_repr}'
-            raise ValueError(msg)
-    elif name not in array_operators:
-        array_repr = ', '.join(repr(el[:-4]) for el in array_operators)
-        msg = f'Operator {how!r} not one of the supported array operators: {array_repr}'
-        raise ValueError(msg)
+    pass
 
 
 @nb.jit('(uint32,)', nopython=True, nogil=True, cache=True)
@@ -62,16 +53,7 @@ composite_op_lookup = {}
 
 def operator(f):
     """Define and register a new image composite operator"""
-
-    if jit_enabled:
-        f2 = nb.vectorize(f)
-        f2._compile_for_argtys((nb.types.uint32, nb.types.uint32))
-        f2._frozen = True
-    else:
-        f2 = np.vectorize(f)
-
-    composite_op_lookup[f.__name__] = f2
-    return f2
+    pass
 
 
 @operator
@@ -129,40 +111,21 @@ def saturate(src, dst):
 
 def arr_operator(f):
     """Define and register a new array composite operator"""
-
-    if jit_enabled:
-        f2 = nb.vectorize(f)
-        f2._compile_for_argtys(
-           (nb.types.int32, nb.types.int32))
-        f2._compile_for_argtys(
-           (nb.types.int64, nb.types.int64))
-        f2._compile_for_argtys(
-            (nb.types.float32, nb.types.float32))
-        f2._compile_for_argtys(
-            (nb.types.float64, nb.types.float64))
-        f2._frozen = True
-    else:
-        f2 = np.vectorize(f)
-
-    composite_op_lookup[f.__name__] = f2
-    return f2
+    pass
 
 
 @arr_operator
 def source_arr(src, dst):
-    if src:
-        return src
-    else:
-        return dst
+    pass
 
 @arr_operator
 def add_arr(src, dst):
-    return src + dst
+    pass
 
 @arr_operator
 def max_arr(src, dst):
-    return max([src,  dst])
+    pass
 
 @arr_operator
 def min_arr(src, dst):
-    return min([src,  dst])
+    pass

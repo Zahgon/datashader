@@ -134,13 +134,7 @@ bools = {'False': False,
 
 
 def timeparse(x, formats=('%H:%M:%S', '%H:%M:%S.%f')):
-    msg = ''
-    for format in formats:
-        try:
-            return datetime.strptime(x, format).time()
-        except ValueError as e:  # raises if it doesn't match the format
-            msg = str(e)
-    raise ValueError(msg)
+    pass
 
 
 def deltaparse(x):
@@ -156,11 +150,7 @@ def deltaparse(x):
         ...
     ValueError: floating point timedelta value not supported
     """
-    value, unit = re.split(r'\s+', x.strip())
-    value = float(value)
-    if not value.is_integer():
-        raise ValueError('floating point timedelta values not supported')
-    return np.timedelta64(int(value), TimeDelta(unit=unit).unit)
+    pass
 
 
 string_coercions = int, float, bools.__getitem__, deltaparse, timeparse
@@ -366,7 +356,7 @@ def unpack(ds):
 @discover.register(dict)
 @discover.register(MappingProxyType)
 def _mapping_discover(m):
-    return Record((k, discover(m[k])) for k in sorted(m))
+    pass
 
 
 @dispatch(OrderedDict)

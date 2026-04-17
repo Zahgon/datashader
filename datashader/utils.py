@@ -80,16 +80,7 @@ class Expr:
         Return a version of the inputs tuple that is suitable for hashing and
         equality comparisons
         """
-        result = []
-        for ip in self.inputs:
-            if isinstance(ip, (list, set)):
-                result.append(tuple(ip))
-            elif isinstance(ip, np.ndarray):
-                result.append(ip.tobytes())
-            else:
-                result.append(ip)
-
-        return tuple(result)
+        pass
 
 
 class Dispatcher:
@@ -136,8 +127,7 @@ def isrealfloat(dt):
     >>> isrealfloat('complex64')
     False
     """
-    dt = datashape.predicates.launder(dt)
-    return isinstance(dt, datashape.Unit) and dt in datashape.typesets.floating
+    pass
 
 
 def isreal(dt):
@@ -308,79 +298,26 @@ def orient_array(raster, res=None, layer=None):
 
 def downsample_aggregate(aggregate, factor, how='mean'):
     """Create downsampled aggregate factor in pixels units"""
-    ys, xs = aggregate.shape[:2]
-    crarr = aggregate[:ys-(ys % int(factor)), :xs-(xs % int(factor))]
-    concat = np.concatenate([[crarr[i::factor, j::factor]
-                            for i in range(factor)]
-                            for j in range(factor)])
-
-    if how == 'mean':
-        return np.nanmean(concat, axis=0)
-    elif how == 'sum':
-        return np.nansum(concat, axis=0)
-    elif how == 'max':
-        return np.nanmax(concat, axis=0)
-    elif how == 'min':
-        return np.nanmin(concat, axis=0)
-    elif how == 'median':
-        return np.nanmedian(concat, axis=0)
-    elif how == 'std':
-        return np.nanstd(concat, axis=0)
-    elif how == 'var':
-        return np.nanvar(concat, axis=0)
-    else:
-        raise ValueError("Invalid 'how' downsample method. Options mean, sum, max, min, median, "
-                         "std, var")
+    pass
 
 
 def summarize_aggregate_values(aggregate, how='linear', num=180):
     """Helper function similar to np.linspace which return values from aggregate min value to
     aggregate max value in either linear or log space.
     """
-
-    max_val = np.nanmax(aggregate.values)
-    min_val = np.nanmin(aggregate.values)
-
-    if min_val == 0:
-        min_val = aggregate.data[aggregate.data > 0].min()
-
-    if how == 'linear':
-        vals = np.linspace(min_val, max_val, num)[None, :]
-    else:
-        vals = (np.logspace(0,
-                            np.log1p(max_val - min_val),
-                            base=np.e, num=num,
-                            dtype=min_val.dtype) + min_val)[None, :]
-
-    return DataArray(vals), min_val, max_val
+    pass
 
 
 def hold(f):
     '''
     simple arg caching decorator
     '''
-    last = []
-
-    def _(*args):
-        if not last or last[0] != args:
-            last[:] = args, f(*args)
-        return last[1]
-    return _
+    pass
 
 
 def export_image(img, filename, fmt=".png", _return=True, export_path=".", background=""):
     """Given a datashader Image object, saves it to a disk file in the requested format"""
-
-    from datashader.transfer_functions import set_background
-
-    if not os.path.exists(export_path):
-        os.mkdir(export_path)
-
-    if background:
-        img = set_background(img, background)
-
-    img.to_pil().save(os.path.join(export_path, filename + fmt))
-    return img if _return else None
+    pass
 
 
 def lnglat_to_meters(longitude, latitude):
@@ -400,15 +337,7 @@ def lnglat_to_meters(longitude, latitude):
        df=pandas.DataFrame(dict(longitude=np.array([-74]),latitude=np.array([40.71])))
        df.loc[:, 'longitude'], df.loc[:, 'latitude'] = lnglat_to_meters(df.longitude,df.latitude)
     """
-    if isinstance(longitude, (list, tuple)):
-        longitude = np.array(longitude)
-    if isinstance(latitude, (list, tuple)):
-        latitude = np.array(latitude)
-
-    origin_shift = np.pi * 6378137
-    easting = longitude * origin_shift / 180.0
-    northing = np.log(np.tan((90 + latitude) * np.pi / 360.0)) * origin_shift / np.pi
-    return (easting, northing)
+    pass
 
 
 # Heavily inspired by odo
@@ -495,70 +424,21 @@ def dataframe_from_multiple_sequences(x_values, y_values):
              each sequence)
 
    """
-
-   # Add a NaN at the end of the array of x values
-   x = np.zeros(x_values.shape[0] + 1)
-   x[-1] = np.nan
-   x[:-1] = x_values
-
-   # Tile this array of x values: number of repeats = number of sequences/time series in the data
-   x = np.tile(x, y_values.shape[0])
-
-   # Add a NaN at the end of every sequence in y_values
-   y = np.zeros((y_values.shape[0], y_values.shape[1] + 1))
-   y[:, -1] = np.nan
-   y[:, :-1] = y_values
-
-   # Return a dataframe with this new set of x and y values
-   return pd.DataFrame({'x': x, 'y': y.flatten()})
+   pass
 
 
 def _pd_mesh(vertices, simplices):
     """Helper for ``datashader.utils.mesh()``. Both arguments are assumed to be
     Pandas DataFrame objects.
     """
-    # Winding auto-detect
-    winding = [0, 1, 2]
-    first_tri = vertices.values[simplices.values[0, winding].astype(np.int64), :2]
-    a, b, c = first_tri
-    p1, p2 = b - a, c - a
-    cross_product = p1[0] * p2[1] - p1[1] * p2[0]
-    if cross_product >= 0:
-        winding = [0, 2, 1]
-
-    # Construct mesh by indexing into vertices with simplex indices
-    vertex_idxs = simplices.values[:, winding]
-    if not vertex_idxs.dtype == 'int64':
-        vertex_idxs = vertex_idxs.astype(np.int64)
-    vals = np.take(vertices.values, vertex_idxs, axis=0)
-    vals = vals.reshape(np.prod(vals.shape[:2]), vals.shape[2])
-    res = pd.DataFrame(vals, columns=vertices.columns)
-
-    # If vertices don't have weights, use simplex weights
-    verts_have_weights = len(vertices.columns) > 2
-    if not verts_have_weights:
-        weight_col = simplices.columns[3]
-        res[weight_col] = simplices.values[:, 3].repeat(3)
-
-    return res
+    pass
 
 
 def _dd_mesh(vertices, simplices):
     """Helper for ``datashader.utils.mesh()``. Both arguments are assumed to be
     Dask DataFrame objects.
     """
-    # Construct mesh by indexing into vertices with simplex indices
-    # TODO: For dask: avoid .compute() calls
-    res = _pd_mesh(vertices.compute(), simplices.compute())
-
-    # Compute a chunksize that will not split the vertices of a single
-    # triangle across partitions
-    approx_npartitions = max(vertices.npartitions, simplices.npartitions)
-    chunksize = int(np.ceil(len(res) / (3*approx_npartitions)) * 3)
-
-    # Create dask dataframe
-    res = dd.from_pandas(res, chunksize=chunksize)
-    return res
+    pass
 
 
 def mesh(vertices, simplices):
@@ -567,25 +447,7 @@ def mesh(vertices, simplices):
     keyword-argument. Both arguments are assumed to be Dask DataFrame
     objects.
     """
-    # Verify the simplex data structure
-    assert simplices.values.shape[1] >= 3, ('At least three vertex columns '
-                                            'are required for the triangle '
-                                            'definition')
-    simplices_all_ints = simplices.dtypes.iloc[:3].map(
-        lambda dt: np.issubdtype(dt, np.integer)
-    ).all()
-    assert simplices_all_ints, ('Simplices must be integral. You may '
-                                'consider casting simplices to integers '
-                                'with ".astype(int)"')
-
-    assert len(vertices.columns) > 2 or simplices.values.shape[1] > 3, \
-        'If no vertex weight column is provided, a triangle weight column is required.'
-
-
-    if dd and isinstance(vertices, dd.DataFrame) and isinstance(simplices, dd.DataFrame):
-        return _dd_mesh(vertices, simplices)
-
-    return _pd_mesh(vertices, simplices)
+    pass
 
 
 def apply(func, args, kwargs=None):

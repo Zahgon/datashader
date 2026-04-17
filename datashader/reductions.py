@@ -75,11 +75,11 @@ class Preprocess(Expr):
 
     @property
     def inputs(self):
-        return (self.column,)
+        pass
 
     @property
     def nan_check_column(self):
-        return None
+        pass
 
 
 class extract(Preprocess):
@@ -125,7 +125,7 @@ class CategoryPreprocess(Preprocess):
     @property
     def cat_column(self):
         """Returns name of categorized column"""
-        return self.column
+        pass
 
     def categories(self, input_dshape):
         """Returns list of categories corresponding to input shape"""
@@ -185,7 +185,7 @@ class category_modulo(category_codes):
         self.modulo = modulo
 
     def _hashable_inputs(self):
-        return super()._hashable_inputs() + (self.offset, self.modulo)
+        pass
 
     def categories(self, in_dshape):
         return list(range(self.modulo))
@@ -231,7 +231,7 @@ class category_binning(category_modulo):
         self.bin_over  = nbins-1 if include_over else nbins
 
     def _hashable_inputs(self):
-        return super()._hashable_inputs() + (self.bin0, self.binsize, self.bin_under, self.bin_over)
+        pass
 
     def validate(self, in_dshape):
         if self.column not in in_dshape.dict:
@@ -267,12 +267,12 @@ class category_values(CategoryPreprocess):
 
     @property
     def inputs(self):
-        return (self.categorizer.column, self.column)
+        pass
 
     @property
     def cat_column(self):
         """Returns name of categorized column"""
-        return self.categorizer.column
+        pass
 
     def categories(self, input_dshape):
         return self.categorizer.categories
@@ -314,10 +314,7 @@ class Reduction(Expr):
 
     @property
     def nan_check_column(self):
-        if self._nan_check_column is not None:
-            return extract(self._nan_check_column)
-        else:
-            return None
+        pass
 
     def uses_cuda_mutex(self) -> UsesCudaMutex:
         """Return ``True`` if this Reduction needs to use a CUDA mutex to
@@ -356,7 +353,7 @@ class Reduction(Expr):
 
     @property
     def inputs(self):
-        return (extract(self.column),)
+        pass
 
     def is_categorical(self):
         """Return ``True`` if this is or contains a categorical reduction."""
@@ -445,31 +442,31 @@ class Reduction(Expr):
 
     @staticmethod
     def _create_bool(shape, array_module):
-        return array_module.zeros(shape, dtype='bool')
+        pass
 
     @staticmethod
     def _create_float32_nan(shape, array_module):
-        return array_module.full(shape, array_module.nan, dtype='f4')
+        pass
 
     @staticmethod
     def _create_float64_nan(shape, array_module):
-        return array_module.full(shape, array_module.nan, dtype='f8')
+        pass
 
     @staticmethod
     def _create_float64_empty(shape, array_module):
-        return array_module.empty(shape, dtype='f8')
+        pass
 
     @staticmethod
     def _create_float64_zero(shape, array_module):
-        return array_module.zeros(shape, dtype='f8')
+        pass
 
     @staticmethod
     def _create_int64(shape, array_module):
-        return array_module.full(shape, -1, dtype='i8')
+        pass
 
     @staticmethod
     def _create_uint32(shape, array_module):
-        return array_module.zeros(shape, dtype='u4')
+        pass
 
     def __repr__(self):
         return f"{type(self).__name__}({self.column!r})"
@@ -482,7 +479,7 @@ class OptionalFieldReduction(Reduction):
 
     @property
     def inputs(self):
-        return (extract(self.column),) if self.column is not None else ()
+        pass
 
     def validate(self, in_dshape):
         if self.column is not None:
@@ -526,7 +523,7 @@ class SelfIntersectingOptionalFieldReduction(OptionalFieldReduction):
     def _hashable_inputs(self):
         # Reductions with different self_intersect attributes much have different hashes otherwise
         # toolz.memoize will treat them as the same to give incorrect results.
-        return super()._hashable_inputs() + (self.self_intersect,)
+        pass
 
 
 class count(SelfIntersectingOptionalFieldReduction):
@@ -552,96 +549,58 @@ class count(SelfIntersectingOptionalFieldReduction):
     @staticmethod
     @ngjit
     def _append(x, y, agg, field):
-        if not isnull(field):
-            agg[y, x] += 1
-            return 0
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor):
-        if not isnull(field):
-            if isnull(agg[y, x]):
-                agg[y, x] = aa_factor - prev_aa_factor
-            else:
-                agg[y, x] += aa_factor - prev_aa_factor
-            return 0
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias_not_self_intersect(x, y, agg, field, aa_factor, prev_aa_factor):
-        if not isnull(field):
-            if isnull(agg[y, x]) or aa_factor > agg[y, x]:
-                agg[y, x] = aa_factor
-                return 0
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_no_field(x, y, agg):
-        agg[y, x] += 1
-        return 0
+        pass
 
     @staticmethod
     @ngjit
     def _append_no_field_antialias(x, y, agg, aa_factor, prev_aa_factor):
-        if isnull(agg[y, x]):
-            agg[y, x] = aa_factor - prev_aa_factor
-        else:
-            agg[y, x] += aa_factor - prev_aa_factor
-        return 0
+        pass
 
     @staticmethod
     @ngjit
     def _append_no_field_antialias_not_self_intersect(x, y, agg, aa_factor, prev_aa_factor):
-        if isnull(agg[y, x]) or aa_factor > agg[y, x]:
-            agg[y, x] = aa_factor
-            return 0
-        return -1
+        pass
 
     # GPU append functions
     @staticmethod
     @nb_cuda.jit(device=True)
     def _append_antialias_cuda(x, y, agg, field, aa_factor, prev_aa_factor):
-        value = field*aa_factor
-        if not isnull(value):
-            old = cuda_atomic_nanmax(agg, (y, x), value)
-            if isnull(old) or old < value:
-                return 0
-        return -1
+        pass
 
     @staticmethod
     @nb_cuda.jit(device=True)
     def _append_no_field_antialias_cuda_not_self_intersect(x, y, agg, aa_factor, prev_aa_factor):
-        if not isnull(aa_factor):
-            old = cuda_atomic_nanmax(agg, (y, x), aa_factor)
-            if isnull(old) or old < aa_factor:
-                return 0
-        return -1
+        pass
 
     @staticmethod
     @nb_cuda.jit(device=True)
     def _append_cuda(x, y, agg, field):
-        if not isnull(field):
-            nb_cuda.atomic.add(agg, (y, x), 1)
-            return 0
-        return -1
+        pass
 
     @staticmethod
     @nb_cuda.jit(device=True)
     def _append_no_field_antialias_cuda(x, y, agg, aa_factor, prev_aa_factor):
-        if not isnull(aa_factor):
-            old = cuda_atomic_nanmax(agg, (y, x), aa_factor)
-            if isnull(old) or old < aa_factor:
-                return 0
-        return -1
+        pass
 
     @staticmethod
     @nb_cuda.jit(device=True)
     def _append_no_field_cuda(x, y, agg):
-        nb_cuda.atomic.add(agg, (y, x), 1)
-        return 0
+        pass
 
     def _build_combine(self, dshape, antialias, cuda, partitioned, categorical = False):
         if antialias:
@@ -651,14 +610,11 @@ class count(SelfIntersectingOptionalFieldReduction):
 
     @staticmethod
     def _combine(aggs):
-        return aggs.sum(axis=0, dtype='u4')
+        pass
 
     @staticmethod
     def _combine_antialias(aggs):
-        ret = aggs[0]
-        for i in range(1, len(aggs)):
-            nansum_in_place(ret, aggs[i])
-        return ret
+        pass
 
     def __repr__(self):
         return "count()"
@@ -679,18 +635,12 @@ class _count_ignore_antialiasing(count):
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor):
-        if not isnull(field) and prev_aa_factor == 0.0:
-            agg[y, x] += 1
-            return 0
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias_not_self_intersect(x, y, agg, field, aa_factor, prev_aa_factor):
-        if not isnull(field) and prev_aa_factor == 0.0:
-            agg[y, x] += 1
-            return 0
-        return -1
+        pass
 
 
 class by(Reduction):
@@ -741,11 +691,11 @@ class by(Reduction):
 
     @property
     def cat_column(self):
-        return self.columns[0]
+        pass
 
     @property
     def val_column(self):
-        return self.columns[1]
+        pass
 
     def validate(self, in_dshape):
         self.preprocess.validate(in_dshape)
@@ -758,7 +708,7 @@ class by(Reduction):
 
     @property
     def inputs(self):
-        return (self.preprocess,)
+        pass
 
     def is_categorical(self):
         return True
@@ -768,7 +718,7 @@ class by(Reduction):
 
     @property
     def nan_check_column(self):
-        return self.reduction.nan_check_column
+        pass
 
     def uses_cuda_mutex(self) -> UsesCudaMutex:
         return self.reduction.uses_cuda_mutex()
@@ -840,33 +790,22 @@ class any(OptionalFieldReduction):
     @staticmethod
     @ngjit
     def _append(x, y, agg, field):
-        if not isnull(field):
-            agg[y, x] = True
-            return 0
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor):
-        if not isnull(field):
-            if isnull(agg[y, x]) or aa_factor > agg[y, x]:
-                agg[y, x] = aa_factor
-                return 0
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_no_field(x, y, agg):
-        agg[y, x] = True
-        return 0
+        pass
 
     @staticmethod
     @ngjit
     def _append_no_field_antialias(x, y, agg, aa_factor, prev_aa_factor):
-        if isnull(agg[y, x]) or aa_factor > agg[y, x]:
-            agg[y, x] = aa_factor
-            return 0
-        return -1
+        pass
 
     # GPU append functions
     _append_cuda =_append
@@ -880,14 +819,11 @@ class any(OptionalFieldReduction):
 
     @staticmethod
     def _combine(aggs):
-        return aggs.sum(axis=0, dtype='bool')
+        pass
 
     @staticmethod
     def _combine_antialias(aggs):
-        ret = aggs[0]
-        for i in range(1, len(aggs)):
-            nanmax_in_place(ret, aggs[i])
-        return ret
+        pass
 
 
 class _upsample(Reduction):
@@ -901,7 +837,7 @@ class _upsample(Reduction):
 
     @property
     def inputs(self):
-        return (extract(self.column),)
+        pass
 
     def _build_create(self, required_dshape):
         # Use uninitialized memory, the upsample function must explicitly set unused
@@ -922,7 +858,7 @@ class _upsample(Reduction):
 
     @staticmethod
     def _combine(aggs):
-        return np.nanmax(aggs, axis=0)
+        pass
 
 
 class FloatingReduction(Reduction):
@@ -956,44 +892,27 @@ class _sum_zero(FloatingReduction):
     @staticmethod
     @ngjit
     def _append(x, y, agg, field):
-        if not isnull(field):
-            # agg[y, x] cannot be null as initialised to zero.
-            agg[y, x] += field
-            return 0
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor):
-        value = field*(aa_factor - prev_aa_factor)
-        if not isnull(value):
-            # agg[y, x] cannot be null as initialised to zero.
-            agg[y, x] += value
-            return 0
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias_not_self_intersect(x, y, agg, field, aa_factor, prev_aa_factor):
-        value = field*aa_factor
-        if not isnull(value) and value > agg[y, x]:
-            # agg[y, x] cannot be null as initialised to zero.
-            agg[y, x] = value
-            return 0
-        return -1
+        pass
 
     # GPU append functions
     @staticmethod
     @nb_cuda.jit(device=True)
     def _append_cuda(x, y, agg, field):
-        if not isnull(field):
-            nb_cuda.atomic.add(agg, (y, x), field)
-            return 0
-        return -1
+        pass
 
     @staticmethod
     def _combine(aggs):
-        return aggs.sum(axis=0, dtype='f8')
+        pass
 
 
 class SelfIntersectingFloatingReduction(FloatingReduction):
@@ -1024,7 +943,7 @@ class SelfIntersectingFloatingReduction(FloatingReduction):
     def _hashable_inputs(self):
         # Reductions with different self_intersect attributes much have different hashes otherwise
         # toolz.memoize will treat them as the same to give incorrect results.
-        return super()._hashable_inputs() + (self.self_intersect,)
+        pass
 
 
 class sum(SelfIntersectingFloatingReduction):
@@ -1054,39 +973,21 @@ class sum(SelfIntersectingFloatingReduction):
     @staticmethod
     @ngjit
     def _append(x, y, agg, field):
-        if not isnull(field):
-            if isnull(agg[y, x]):
-                agg[y, x] = field
-            else:
-                agg[y, x] += field
-            return 0
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor):
-        value = field*(aa_factor - prev_aa_factor)
-        if not isnull(value):
-            if isnull(agg[y, x]):
-                agg[y, x] = value
-            else:
-                agg[y, x] += value
-            return 0
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias_not_self_intersect(x, y, agg, field, aa_factor, prev_aa_factor):
-        value = field*aa_factor
-        if not isnull(value):
-            if isnull(agg[y, x]) or value > agg[y, x]:
-                agg[y, x] = value
-                return 0
-        return -1
+        pass
 
     @staticmethod
     def _combine(aggs):
-        return nansum_missing(aggs, axis=0)
+        pass
 
     @staticmethod
     def _finalize(bases, cuda=False, **kwargs):
@@ -1128,13 +1029,7 @@ class m2(FloatingReduction):
     def _append(x, y, m2, field, sum, count):
         # sum & count are the results of sum[y, x], count[y, x] before being
         # updated by field
-        if not isnull(field):
-            if count > 0:
-                u1 = np.float64(sum) / count
-                u = np.float64(sum + field) / (count + 1)
-                m2[y, x] += (field - u1) * (field - u)
-                return 0
-        return -1
+        pass
 
     # GPU append functions
     @staticmethod
@@ -1142,19 +1037,11 @@ class m2(FloatingReduction):
     def _append_cuda(x, y, m2, field, sum, count):
         # sum & count are the results of sum[y, x], count[y, x] before being
         # updated by field
-        if not isnull(field):
-            if count > 0:
-                u1 = np.float64(sum) / count
-                u = np.float64(sum + field) / (count + 1)
-                m2[y, x] += (field - u1) * (field - u)
-                return 0
-        return -1
+        pass
 
     @staticmethod
     def _combine(Ms, sums, ns):
-        with np.errstate(divide='ignore', invalid='ignore'):
-            mu = np.nansum(sums, axis=0) / ns.sum(axis=0)
-            return np.nansum(Ms + ns*(sums/ns - mu)**2, axis=0)
+        pass
 
 
 class min(FloatingReduction):
@@ -1176,33 +1063,22 @@ class min(FloatingReduction):
     @staticmethod
     @ngjit
     def _append(x, y, agg, field):
-        if not isnull(field) and (isnull(agg[y, x]) or agg[y, x] > field):
-            agg[y, x] = field
-            return 0
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor):
-        value = field*aa_factor
-        if not isnull(value) and (isnull(agg[y, x]) or value > agg[y, x]):
-            agg[y, x] = value
-            return 0
-        return -1
+        pass
 
     # GPU append functions
     @staticmethod
     @nb_cuda.jit(device=True)
     def _append_cuda(x, y, agg, field):
-        if not isnull(field):
-            old = cuda_atomic_nanmin(agg, (y, x), field)
-            if isnull(old) or old > field:
-                return 0
-        return -1
+        pass
 
     @staticmethod
     def _combine(aggs):
-        return np.nanmin(aggs, axis=0)
+        pass
 
 
 class max(FloatingReduction):
@@ -1221,43 +1097,27 @@ class max(FloatingReduction):
     @staticmethod
     @ngjit
     def _append(x, y, agg, field):
-        if not isnull(field) and (isnull(agg[y, x]) or agg[y, x] < field):
-            agg[y, x] = field
-            return 0
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor):
-        value = field*aa_factor
-        if not isnull(value) and (isnull(agg[y, x]) or value > agg[y, x]):
-            agg[y, x] = value
-            return 0
-        return -1
+        pass
 
     # GPU append functions
     @staticmethod
     @nb_cuda.jit(device=True)
     def _append_antialias_cuda(x, y, agg, field, aa_factor, prev_aa_factor):
-        value = field*aa_factor
-        if not isnull(value):
-            old = cuda_atomic_nanmax(agg, (y, x), value)
-            if isnull(old) or old < value:
-                return 0
-        return -1
+        pass
 
     @staticmethod
     @nb_cuda.jit(device=True)
     def _append_cuda(x, y, agg, field):
-        if not isnull(field):
-            old = cuda_atomic_nanmax(agg, (y, x), field)
-            if isnull(old) or old < field:
-                return 0
-        return -1
+        pass
 
     @staticmethod
     def _combine(aggs):
-        return np.nanmax(aggs, axis=0)
+        pass
 
 
 class count_cat(by):
@@ -1363,9 +1223,7 @@ class _first_or_last(Reduction):
     def _combine(aggs):
         # Dask combine is handled by a where reduction using a row index.
         # Hence this can only ever be called if npartitions == 1 in which case len(aggs) == 1.
-        if len(aggs) > 1:
-            raise RuntimeError("_combine should never be called with more than one agg")
-        return aggs[0]
+        pass
 
     def _create_row_index_selector(self):
         pass
@@ -1398,19 +1256,12 @@ class first(_first_or_last):
     @staticmethod
     @ngjit
     def _append(x, y, agg, field):
-        if not isnull(field) and isnull(agg[y, x]):
-            agg[y, x] = field
-            return 0
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor):
-        value = field*aa_factor
-        if not isnull(value) and (isnull(agg[y, x]) or value > agg[y, x]):
-            agg[y, x] = value
-            return 0
-        return -1
+        pass
 
     def _create_row_index_selector(self):
         return _min_row_index()
@@ -1436,19 +1287,12 @@ class last(_first_or_last):
     @staticmethod
     @ngjit
     def _append(x, y, agg, field):
-        if not isnull(field):
-            agg[y, x] = field
-            return 0
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor):
-        value = field*aa_factor
-        if not isnull(value) and (isnull(agg[y, x]) or value > agg[y, x]):
-            agg[y, x] = value
-            return 0
-        return -1
+        pass
 
     def _create_row_index_selector(self):
         return _max_row_index()
@@ -1486,7 +1330,7 @@ class FloatingNReduction(OptionalFieldReduction):
         return finalize
 
     def _hashable_inputs(self):
-        return super()._hashable_inputs() + (self.n,)
+        pass
 
     def __repr__(self):
         return f"{type(self).__name__}(column={self.column!r}, n={self.n!r})"
@@ -1515,9 +1359,7 @@ class _first_n_or_last_n(FloatingNReduction):
     def _combine(aggs):
         # Dask combine is handled by a where reduction using a row index.
         # Hence this can only ever be called if npartitions == 1 in which case len(aggs) == 1.
-        if len(aggs) > 1:
-            raise RuntimeError("_combine should never be called with more than one agg")
-        return aggs[0]
+        pass
 
     def _create_row_index_selector(self):
         pass
@@ -1538,39 +1380,12 @@ class first_n(_first_n_or_last_n):
     @staticmethod
     @ngjit
     def _append(x, y, agg, field):
-        if not isnull(field):
-            # Check final value first for quick abort.
-            n = agg.shape[2]
-            if not isnull(agg[y, x, n-1]):
-                return -1
-
-            # Linear walk along stored values.
-            # Could do binary search instead but not expecting n to be large.
-            for i in range(n):
-                if isnull(agg[y, x, i]):
-                    # Nothing to shift.
-                    agg[y, x, i] = field
-                    return i
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor):
-        value = field*aa_factor
-        if not isnull(value):
-            # Check final value first for quick abort.
-            n = agg.shape[2]
-            if not isnull(agg[y, x, n-1]):
-                return -1
-
-            # Linear walk along stored values.
-            # Could do binary search instead but not expecting n to be large.
-            for i in range(n):
-                if isnull(agg[y, x, i]):
-                    # Nothing to shift.
-                    agg[y, x, i] = value
-                    return i
-        return -1
+        pass
 
     def _create_row_index_selector(self):
         return _min_n_row_index(n=self.n)
@@ -1584,21 +1399,12 @@ class last_n(_first_n_or_last_n):
     @staticmethod
     @ngjit
     def _append(x, y, agg, field):
-        if not isnull(field):
-            # Always inserts at front of agg's third dimension.
-            shift_and_insert(agg[y, x], field, 0)
-            return 0
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor):
-        value = field*aa_factor
-        if not isnull(value):
-            # Always inserts at front of agg's third dimension.
-            shift_and_insert(agg[y, x], value, 0)
-            return 0
-        return -1
+        pass
 
     def _create_row_index_selector(self):
         return _max_n_row_index(n=self.n)
@@ -1615,43 +1421,18 @@ class max_n(FloatingNReduction):
     @staticmethod
     @ngjit
     def _append(x, y, agg, field):
-        if not isnull(field):
-            # Linear walk along stored values.
-            # Could do binary search instead but not expecting n to be large.
-            n = agg.shape[2]
-            for i in range(n):
-                if isnull(agg[y, x, i]) or field > agg[y, x, i]:
-                    shift_and_insert(agg[y, x], field, i)
-                    return i
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor):
-        value = field*aa_factor
-        if not isnull(value):
-            # Linear walk along stored values.
-            # Could do binary search instead but not expecting n to be large.
-            n = agg.shape[2]
-            for i in range(n):
-                if isnull(agg[y, x, i]) or value > agg[y, x, i]:
-                    shift_and_insert(agg[y, x], value, i)
-                    return i
-        return -1
+        pass
 
     # GPU append functions
     @staticmethod
     @nb_cuda.jit(device=True)
     def _append_cuda(x, y, agg, field):
-        if not isnull(field):
-            # Linear walk along stored values.
-            # Could do binary search instead but not expecting n to be large.
-            n = agg.shape[2]
-            for i in range(n):
-                if isnull(agg[y, x, i]) or field > agg[y, x, i]:
-                    cuda_shift_and_insert(agg[y, x], field, i)
-                    return i
-        return -1
+        pass
 
     def _build_combine(self, dshape, antialias, cuda, partitioned, categorical = False):
         if cuda:
@@ -1661,24 +1442,11 @@ class max_n(FloatingNReduction):
 
     @staticmethod
     def _combine(aggs):
-        ret = aggs[0]
-        for i in range(1, len(aggs)):
-            if ret.ndim == 3:  # ndim is either 3 (ny, nx, n) or 4 (ny, nx, ncat, n)
-                nanmax_n_in_place_3d(aggs[0], aggs[i])
-            else:
-                nanmax_n_in_place_4d(aggs[0], aggs[i])
-        return ret
+        pass
 
     @staticmethod
     def _combine_cuda(aggs):
-        ret = aggs[0]
-        kernel_args = cuda_args(ret.shape[:-1])
-        for i in range(1, len(aggs)):
-            if ret.ndim == 3:  # ndim is either 3 (ny, nx, n) or 4 (ny, nx, ncat, n)
-                cuda_nanmax_n_in_place_3d[kernel_args](aggs[0], aggs[i])
-            else:
-                cuda_nanmax_n_in_place_4d[kernel_args](aggs[0], aggs[i])
-        return ret
+        pass
 
 
 class min_n(FloatingNReduction):
@@ -1695,43 +1463,18 @@ class min_n(FloatingNReduction):
     @staticmethod
     @ngjit
     def _append(x, y, agg, field):
-        if not isnull(field):
-            # Linear walk along stored values.
-            # Could do binary search instead but not expecting n to be large.
-            n = agg.shape[2]
-            for i in range(n):
-                if isnull(agg[y, x, i]) or field < agg[y, x, i]:
-                    shift_and_insert(agg[y, x], field, i)
-                    return i
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor):
-        value = field*aa_factor
-        if not isnull(value):
-            # Linear walk along stored values.
-            # Could do binary search instead but not expecting n to be large.
-            n = agg.shape[2]
-            for i in range(n):
-                if isnull(agg[y, x, i]) or value < agg[y, x, i]:
-                    shift_and_insert(agg[y, x], value, i)
-                    return i
-        return -1
+        pass
 
     # GPU append functions
     @staticmethod
     @nb_cuda.jit(device=True)
     def _append_cuda(x, y, agg, field):
-        if not isnull(field):
-            # Linear walk along stored values.
-            # Could do binary search instead but not expecting n to be large.
-            n = agg.shape[2]
-            for i in range(n):
-                if isnull(agg[y, x, i]) or field < agg[y, x, i]:
-                    cuda_shift_and_insert(agg[y, x], field, i)
-                    return i
-        return -1
+        pass
 
     def _build_combine(self, dshape, antialias, cuda, partitioned, categorical = False):
         if cuda:
@@ -1741,24 +1484,11 @@ class min_n(FloatingNReduction):
 
     @staticmethod
     def _combine(aggs):
-        ret = aggs[0]
-        for i in range(1, len(aggs)):
-            if ret.ndim == 3:  # ndim is either 3 (ny, nx, n) or 4 (ny, nx, ncat, n)
-                nanmin_n_in_place_3d(aggs[0], aggs[i])
-            else:
-                nanmin_n_in_place_4d(aggs[0], aggs[i])
-        return ret
+        pass
 
     @staticmethod
     def _combine_cuda(aggs):
-        ret = aggs[0]
-        kernel_args = cuda_args(ret.shape[:-1])
-        for i in range(1, len(aggs)):
-            if ret.ndim == 3:  # ndim is either 3 (ny, nx, n) or 4 (ny, nx, ncat, n)
-                cuda_nanmin_n_in_place_3d[kernel_args](aggs[0], aggs[i])
-            else:
-                cuda_nanmin_n_in_place_4d[kernel_args](aggs[0], aggs[i])
-        return ret
+        pass
 
 
 class mode(Reduction):
@@ -1879,39 +1609,24 @@ class where(FloatingReduction):
     @staticmethod
     @ngjit
     def _append(x, y, agg, field, update_index):
-        if agg.ndim > 2:
-            shift_and_insert(agg[y, x], field, update_index)
-        else:
-            agg[y, x] = field
-        return update_index
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor, update_index):
         # Ignore aa_factor.
-        if agg.ndim > 2:
-            shift_and_insert(agg[y, x], field, update_index)
-        else:
-            agg[y, x] = field
+        pass
 
     @staticmethod
     @nb_cuda.jit(device=True)
     def _append_antialias_cuda(x, y, agg, field, aa_factor, prev_aa_factor, update_index):
         # Ignore aa_factor
-        if agg.ndim > 2:
-            cuda_shift_and_insert(agg[y, x], field, update_index)
-        else:
-            agg[y, x] = field
-        return update_index
+        pass
 
     @staticmethod
     @nb_cuda.jit(device=True)
     def _append_cuda(x, y, agg, field, update_index):
-        if agg.ndim > 2:
-            cuda_shift_and_insert(agg[y, x], field, update_index)
-        else:
-            agg[y, x] = field
-        return update_index
+        pass
 
     def _build_append(self, dshape, schema, cuda, antialias, self_intersect):
         # If self.column is SpecialColumn.RowIndex then append function is passed a
@@ -1966,99 +1681,35 @@ class where(FloatingReduction):
 
         @ngjit
         def combine_cpu_2d(aggs, selector_aggs):
-            ny, nx = aggs[0].shape
-            for y in range(ny):
-                for x in range(nx):
-                    value = selector_aggs[1][y, x]
-                    if not invalid(value) and append(x, y, selector_aggs[0], value) >= 0:
-                        aggs[0][y, x] = aggs[1][y, x]
+            pass
 
         @ngjit
         def combine_cpu_3d(aggs, selector_aggs):
-            ny, nx, ncat = aggs[0].shape
-            for y in range(ny):
-                for x in range(nx):
-                    for cat in range(ncat):
-                        value = selector_aggs[1][y, x, cat]
-                        if not invalid(value) and append(x, y, selector_aggs[0][:, :, cat],
-                                                         value) >= 0:
-                            aggs[0][y, x, cat] = aggs[1][y, x, cat]
+            pass
 
         @ngjit
         def combine_cpu_n_3d(aggs, selector_aggs):
-            ny, nx, n = aggs[0].shape
-            for y in range(ny):
-                for x in range(nx):
-                    for i in range(n):
-                        value = selector_aggs[1][y, x, i]
-                        if invalid(value):
-                            break
-                        update_index = append(x, y, selector_aggs[0], value)
-                        if update_index < 0:
-                            break
-                        shift_and_insert(aggs[0][y, x], aggs[1][y, x, i], update_index)
+            pass
 
         @ngjit
         def combine_cpu_n_4d(aggs, selector_aggs):
-            ny, nx, ncat, n = aggs[0].shape
-            for y in range(ny):
-                for x in range(nx):
-                    for cat in range(ncat):
-                        for i in range(n):
-                            value = selector_aggs[1][y, x, cat, i]
-                            if invalid(value):
-                                break
-                            update_index = append(x, y, selector_aggs[0][:, :, cat, :], value)
-                            if update_index < 0:
-                                break
-                            shift_and_insert(aggs[0][y, x, cat], aggs[1][y, x, cat, i],
-                                             update_index)
+            pass
 
         @nb_cuda.jit
         def combine_cuda_2d(aggs, selector_aggs):
-            ny, nx = aggs[0].shape
-            x, y = nb_cuda.grid(2)
-            if x < nx and y < ny:
-                value = selector_aggs[1][y, x]
-                if not invalid(value) and append(x, y, selector_aggs[0], value) >= 0:
-                    aggs[0][y, x] = aggs[1][y, x]
+            pass
 
         @nb_cuda.jit
         def combine_cuda_3d(aggs, selector_aggs):
-            ny, nx, ncat = aggs[0].shape
-            x, y, cat = nb_cuda.grid(3)
-            if x < nx and y < ny and cat < ncat:
-                value = selector_aggs[1][y, x, cat]
-                if not invalid(value) and append(x, y, selector_aggs[0][:, :, cat], value) >= 0:
-                    aggs[0][y, x, cat] = aggs[1][y, x, cat]
+            pass
 
         @nb_cuda.jit
         def combine_cuda_n_3d(aggs, selector_aggs):
-            ny, nx, n = aggs[0].shape
-            x, y = nb_cuda.grid(2)
-            if x < nx and y < ny:
-                for i in range(n):
-                    value = selector_aggs[1][y, x, i]
-                    if invalid(value):
-                        break
-                    update_index = append(x, y, selector_aggs[0], value)
-                    if update_index < 0:
-                        break
-                    cuda_shift_and_insert(aggs[0][y, x], aggs[1][y, x, i], update_index)
+            pass
 
         @nb_cuda.jit
         def combine_cuda_n_4d(aggs, selector_aggs):
-            ny, nx, ncat, n = aggs[0].shape
-            x, y, cat = nb_cuda.grid(3)
-            if x < nx and y < ny and cat < ncat:
-                for i in range(n):
-                    value = selector_aggs[1][y, x, cat, i]
-                    if invalid(value):
-                        break
-                    update_index = append(x, y, selector_aggs[0][:, :, cat, :], value)
-                    if update_index < 0:
-                        break
-                    cuda_shift_and_insert(aggs[0][y, x, cat], aggs[1][y, x, cat, i], update_index)
+            pass
 
         if is_n_reduction:
             # ndim is either 3 (ny, nx, n) or 4 (ny, nx, ncat, n)
@@ -2184,7 +1835,7 @@ class summary(Expr):
 
     @property
     def inputs(self):
-        return tuple(unique(concat(v.inputs for v in self.values)))
+        pass
 
     def __repr__(self):
         pairs = ", ".join([f"{k}={v!r}" for k, v in zip(self.keys, self.values, strict=True)])
@@ -2218,41 +1869,27 @@ class _max_row_index(_max_or_min_row_index):
     @ngjit
     def _append(x, y, agg, field):
         # field is int64 row index
-        if field > agg[y, x]:
-            agg[y, x] = field
-            return 0
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor):
         # field is int64 row index
         # Ignore aa_factor
-        if field > agg[y, x]:
-            agg[y, x] = field
-            return 0
-        return -1
+        pass
 
     # GPU append functions
     @staticmethod
     @nb_cuda.jit(device=True)
     def _append_cuda(x, y, agg, field):
         # field is int64 row index
-        if field != -1:
-            old = nb_cuda.atomic.max(agg, (y, x), field)
-            if old < field:
-                return 0
-        return -1
+        pass
 
     @staticmethod
     def _combine(aggs):
         # Maximum ignoring -1 values
         # Works for CPU and GPU
-        ret = aggs[0]
-        for i in range(1, len(aggs)):
-            # Works with numpy or cupy arrays
-            np.maximum(ret, aggs[i], out=ret)
-        return ret
+        pass
 
 
 class _min_row_index(_max_or_min_row_index):
@@ -2276,20 +1913,14 @@ class _min_row_index(_max_or_min_row_index):
     @ngjit
     def _append(x, y, agg, field):
         # field is int64 row index
-        if field != -1 and (agg[y, x] == -1 or field < agg[y, x]):
-            agg[y, x] = field
-            return 0
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor):
         # field is int64 row index
         # Ignore aa_factor
-        if field != -1 and (agg[y, x] == -1 or field < agg[y, x]):
-            agg[y, x] = field
-            return 0
-        return -1
+        pass
 
     # GPU append functions
     @staticmethod
@@ -2297,10 +1928,7 @@ class _min_row_index(_max_or_min_row_index):
     def _append_cuda(x, y, agg, field):
         # field is int64 row index
         # Always uses cuda mutex so this does not need to be atomic
-        if field != -1 and (agg[y, x] == -1 or field < agg[y, x]):
-            agg[y, x] = field
-            return 0
-        return -1
+        pass
 
     def _build_combine(self, dshape, antialias, cuda, partitioned, categorical = False):
         if cuda:
@@ -2311,23 +1939,11 @@ class _min_row_index(_max_or_min_row_index):
     @staticmethod
     def _combine(aggs):
         # Minimum ignoring -1 values
-        ret = aggs[0]
-        for i in range(1, len(aggs)):
-            # Can take 2d (ny, nx) or 3d (ny, nx, ncat) arrays.
-            row_min_in_place(ret, aggs[i])
-        return ret
+        pass
 
     @staticmethod
     def _combine_cuda(aggs):
-        ret = aggs[0]
-        if len(aggs) > 1:
-            if ret.ndim == 2:  # ndim is either 2 (ny, nx) or 3 (ny, nx, ncat)
-                # 3d view of each agg
-                aggs = [cp.expand_dims(agg, 2) for agg in aggs]
-            kernel_args = cuda_args(ret.shape[:3])
-            for i in range(1, len(aggs)):
-                cuda_row_min_in_place[kernel_args](aggs[0], aggs[i])
-        return ret
+        pass
 
 
 class _max_n_or_min_n_row_index(FloatingNReduction):
@@ -2367,33 +1983,14 @@ class _max_n_row_index(_max_n_or_min_n_row_index):
     @ngjit
     def _append(x, y, agg, field):
         # field is int64 row index
-        if field != -1:
-            # Linear walk along stored values.
-            # Could do binary search instead but not expecting n to be large.
-            n = agg.shape[2]
-            for i in range(n):
-                if agg[y, x, i] == -1 or field > agg[y, x, i]:
-                    shift_and_insert(agg[y, x], field, i)
-                    return i
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor):
         # field is int64 row index
         # Ignoring aa_factor
-        if field != -1:
-            # Linear walk along stored values.
-            # Could do binary search instead but not expecting n to be large.
-            n = agg.shape[2]
-            for i in range(n):
-                if agg[y, x, i] == -1 or field > agg[y, x, i]:
-                    # Bump previous values along to make room for new value.
-                    for j in range(n-1, i, -1):
-                        agg[y, x, j] = agg[y, x, j-1]
-                    agg[y, x, i] = field
-                    return i
-        return -1
+        pass
 
     # GPU append functions
     @staticmethod
@@ -2401,36 +1998,15 @@ class _max_n_row_index(_max_n_or_min_n_row_index):
     def _append_cuda(x, y, agg, field):
         # field is int64 row index
         # Always uses cuda mutex so this does not need to be atomic
-        if field != -1:
-            # Linear walk along stored values.
-            # Could do binary search instead but not expecting n to be large.
-            n = agg.shape[2]
-            for i in range(n):
-                if agg[y, x, i] == -1 or field > agg[y, x, i]:
-                    cuda_shift_and_insert(agg[y, x], field, i)
-                    return i
-        return -1
+        pass
 
     @staticmethod
     def _combine(aggs):
-        ret = aggs[0]
-        if len(aggs) > 1:
-            if ret.ndim == 3:  # ndim is either 3 (ny, nx, n) or 4 (ny, nx, ncat, n)
-                row_max_n_in_place_3d(aggs[0], aggs[1])
-            else:
-                row_max_n_in_place_4d(aggs[0], aggs[1])
-        return ret
+        pass
 
     @staticmethod
     def _combine_cuda(aggs):
-        ret = aggs[0]
-        if len(aggs) > 1:
-            kernel_args = cuda_args(ret.shape[:-1])
-            if ret.ndim == 3:  # ndim is either 3 (ny, nx, n) or 4 (ny, nx, ncat, n)
-                cuda_row_max_n_in_place_3d[kernel_args](aggs[0], aggs[1])
-            else:
-                cuda_row_max_n_in_place_4d[kernel_args](aggs[0], aggs[1])
-        return ret
+        pass
 
 
 class _min_n_row_index(_max_n_or_min_n_row_index):
@@ -2450,67 +2026,29 @@ class _min_n_row_index(_max_n_or_min_n_row_index):
     @ngjit
     def _append(x, y, agg, field):
         # field is int64 row index
-        if field != -1:
-            # Linear walk along stored values.
-            # Could do binary search instead but not expecting n to be large.
-            n = agg.shape[2]
-            for i in range(n):
-                if agg[y, x, i] == -1 or field < agg[y, x, i]:
-                    shift_and_insert(agg[y, x], field, i)
-                    return i
-        return -1
+        pass
 
     @staticmethod
     @ngjit
     def _append_antialias(x, y, agg, field, aa_factor, prev_aa_factor):
         # field is int64 row index
         # Ignoring aa_factor
-        if field != -1:
-            # Linear walk along stored values.
-            # Could do binary search instead but not expecting n to be large.
-            n = agg.shape[2]
-            for i in range(n):
-                if agg[y, x, i] == -1 or field < agg[y, x, i]:
-                    shift_and_insert(agg[y, x], field, i)
-                    return i
-        return -1
+        pass
 
     @staticmethod
     @nb_cuda.jit(device=True)
     def _append_cuda(x, y, agg, field):
         # field is int64 row index
         # Always uses cuda mutex so this does not need to be atomic
-        if field != -1:
-            # Linear walk along stored values.
-            # Could do binary search instead but not expecting n to be large.
-            n = agg.shape[2]
-            for i in range(n):
-                if agg[y, x, i] == -1 or field < agg[y, x, i]:
-                    cuda_shift_and_insert(agg[y, x], field, i)
-                    return i
-        return -1
+        pass
 
     @staticmethod
     def _combine(aggs):
-        ret = aggs[0]
-        if len(aggs) > 1:
-            if ret.ndim == 3:  # ndim is either 3 (ny, nx, n) or 4 (ny, nx, ncat, n)
-                row_min_n_in_place_3d(aggs[0], aggs[1])
-            else:
-                row_min_n_in_place_4d(aggs[0], aggs[1])
-        return ret
+        pass
 
     @staticmethod
     def _combine_cuda(aggs):
-        ret = aggs[0]
-        if len(aggs) > 1:
-            kernel_args = cuda_args(ret.shape[:-1])
-            if ret.ndim == 3:  # ndim is either 3 (ny, nx, n) or 4 (ny, nx, ncat, n)
-                cuda_row_min_n_in_place_3d[kernel_args](aggs[0], aggs[1])
-            else:
-                cuda_row_min_n_in_place_4d[kernel_args](aggs[0], aggs[1])
-
-        return ret
+        pass
 
 
 __all__ = list(set([_k for _k,_v in locals().items()

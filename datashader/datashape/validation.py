@@ -56,10 +56,4 @@ def validate(ds):
 
 
 def _validate(ds, params):
-    if isinstance(ds, T.DataShape):
-        # Check ellipses
-        ellipses = [x for x in ds.parameters if isinstance(x, T.Ellipsis)]
-        if len(ellipses) > 1:
-            raise TypeError("Can only use a single wildcard")
-        elif isinstance(ds.parameters[-1], T.Ellipsis):
-            raise TypeError("Measure may not be an Ellipsis (...)")
+    pass

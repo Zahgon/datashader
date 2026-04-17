@@ -75,8 +75,7 @@ def ishomogeneous(ds):
     >>> ishomogeneous('var * {name: string, amount: int}')
     False
     """
-    ds = dshape(ds)
-    return len(set(remove(isdimension, collect(isscalar, ds)))) == 1
+    pass
 
 
 def _dimensions(ds):
@@ -121,8 +120,7 @@ def istabular(ds):
     >>> istabular('var * (int64, string, ?float64)')
     False
     """
-    ds = dshape(ds)
-    return _dimensions(ds) == 1 and isrecord(ds.measure)
+    pass
 
 
 def iscollection(ds):
@@ -133,9 +131,7 @@ def iscollection(ds):
     >>> iscollection('int32')
     False
     """
-    if isinstance(ds, str):
-        ds = dshape(ds)
-    return isdimension(ds[0])
+    pass
 
 
 def isnumeric(ds):
@@ -192,7 +188,7 @@ def isboolean(ds):
     >>> isboolean('int')
     False
     """
-    return launder(ds) in boolean
+    pass
 
 
 def isdatelike(ds):
@@ -205,5 +201,4 @@ def isdatelike(ds):
     >>> isdatelike('?datetime')
     True
     """
-    ds = launder(ds)
-    return ds == date_ or ds == datetime_
+    pass

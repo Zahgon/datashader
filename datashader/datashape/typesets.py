@@ -29,11 +29,11 @@ class TypeSet(Unit):
 
     @property
     def _set(self):
-        return set(self._order)
+        pass
 
     @property
     def types(self):
-        return self._order
+        pass
 
     def __eq__(self, other):
         return (isinstance(other, type(self)) and
@@ -70,15 +70,7 @@ def matches_typeset(types, signature):
     >>> matches_typeset(integral, real)
     True
     """
-    if types in signature:
-        return True
-    match = True
-    for a, b in zip(types, signature):
-        check = isinstance(b, TypeSet)
-        if check and (a not in b) or (not check and a != b):
-            match = False
-            break
-    return match
+    pass
 
 
 class TypesetRegistry:
@@ -87,12 +79,7 @@ class TypesetRegistry:
         self.lookup = self.registry.get
 
     def register_typeset(self, name, typeset):
-        if name in self.registry:
-            raise TypeError(
-                f"TypeSet {name} already defined with types {self.registry[name].types}"
-            )
-        self.registry[name] = typeset
-        return typeset
+        pass
 
     def __getitem__(self, key):
         value = self.lookup(key)
@@ -159,10 +146,7 @@ def supertype(measure):
     >>> supertype(Option(bool_))
     {boolean}
     """
-    if isinstance(measure, Option):
-        measure = measure.ty
-    assert matches_typeset(measure, scalar), 'measure must be numeric'
-    return supertype_map[measure]
+    pass
 
 
 def maxtype(measure):
@@ -191,19 +175,4 @@ def maxtype(measure):
     >>> maxtype(Option(TimeDelta(unit='ms')))
     Option(ty=TimeDelta(unit='ms'))
     """
-    measure = measure.measure
-    isoption = isinstance(measure, Option)
-    if isoption:
-        measure = measure.ty
-    if (not matches_typeset(measure, scalar) and
-        not isinstance(measure, (Decimal, TimeDelta))):
-
-        raise TypeError('measure must be numeric')
-
-    if measure == bool_:
-        result = bool_
-    elif isinstance(measure, (Decimal, TimeDelta)):
-        result = measure
-    else:
-        result = max(supertype(measure).types, key=lambda x: x.itemsize)
-    return Option(result) if isoption else result
+    pass

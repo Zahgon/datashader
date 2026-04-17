@@ -45,28 +45,15 @@ class Image(xr.DataArray):
         return fromarray(arr)
 
     def to_bytesio(self, format='png', origin='lower'):
-        fp = BytesIO()
-        self.to_pil(origin).save(fp, format)
-        fp.seek(0)
-        return fp
+        pass
 
     def _repr_png_(self):
         """Supports rich PNG display in a Jupyter notebook"""
-        return self.to_pil()._repr_png_()
+        pass
 
     def _repr_html_(self):
         """Supports rich HTML display in a Jupyter notebook"""
-        # imported here to avoid depending on these packages unless actually used
-        from io import BytesIO
-        from base64 import b64encode
-
-        b = BytesIO()
-        self.to_pil().save(b, format='png')
-
-        blob = b64encode(b.getvalue()).decode('utf-8')
-        h = """<img style="margin: auto; border:""" + str(self.border) + """px solid" """ + \
-            f"""src='data:image/png;base64,{blob}'/>"""
-        return h
+        pass
 
 
 
@@ -89,26 +76,11 @@ class Images:
         Set the number of columns to use in the HTML table.
         Returns self for convenience.
         """
-        self.num_cols=n
-        return self
+        pass
 
     def _repr_html_(self):
         """Supports rich display in a Jupyter notebook, using an HTML table"""
-        htmls = []
-        col=0
-        tr="""<tr style="background-color:white">"""
-        for i in self.images:
-            label=i.name if hasattr(i,"name") and i.name is not None else ""
-
-            htmls.append("""<td style="text-align: center"><b>""" + label +
-                         f"""</b><br><br>{i._repr_html_()}</td>""")
-            col+=1
-            if self.num_cols is not None and col>=self.num_cols:
-                col=0
-                htmls.append("</tr>"+tr)
-
-        return """<table style="width:100%; text-align: center"><tbody>"""+ tr +\
-               "".join(htmls) + """</tr></tbody></table>"""
+        pass
 
 
 
@@ -174,45 +146,7 @@ def eq_hist(data, mask=None, nbins=256*256):
     ----------
     .. [1] http://scikit-image.org/docs/stable/api/skimage.exposure.html#equalize-hist
     """
-    if cupy and isinstance(data, cupy.ndarray):
-        from._cuda_utils import interp
-        array_module = cupy
-    elif not isinstance(data, np.ndarray):
-        raise TypeError("data must be an ndarray")
-    else:
-        interp = np.interp
-        array_module = np
-
-    if mask is not None and array_module.all(mask):
-        # Issue #1166, return early with array of all nans if all of data is masked out.
-        return array_module.full_like(data, np.nan), 0
-
-    data2 = data if mask is None else data[~mask]
-
-    # Run more accurate value counting if data is of boolean or integer type
-    # and unique value array is smaller than nbins.
-    if data2.dtype == bool or (array_module.issubdtype(data2.dtype, array_module.integer) and
-                               array_module.ptp(data2) < nbins):
-        values, counts = array_module.unique(data2, return_counts=True)
-        vmin, vmax = values[0].item(), values[-1].item()  # Convert from arrays to scalars.
-        interval = vmax-vmin
-        bin_centers = array_module.arange(vmin, vmax+1)
-        hist = array_module.zeros(interval+1, dtype='uint64')
-        hist[values-vmin] = counts
-        discrete_levels = len(values)
-    else:
-        hist, bin_edges = array_module.histogram(data2, bins=nbins)
-        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-        keep_mask = (hist > 0)
-        discrete_levels = array_module.count_nonzero(keep_mask)
-        if discrete_levels != len(hist):
-            # Remove empty histogram bins.
-            hist = hist[keep_mask]
-            bin_centers = bin_centers[keep_mask]
-    cdf = hist.cumsum()
-    cdf = cdf / float(cdf[-1])
-    out = interp(data, bin_centers, cdf).reshape(data.shape)
-    return out if mask is None else array_module.where(mask, array_module.nan, out), discrete_levels
+    pass
 
 
 
@@ -794,151 +728,35 @@ def spread(img, px=1, shape='circle', how=None, mask=None, name=None):
         Optional string name to give to the Image object to return,
         to label results for display.
     """
-    if not isinstance(img, xr.DataArray):
-        raise TypeError(f"Expected `xr.DataArray`, got: `{type(img)}`")
-    is_image = isinstance(img, Image)
-    name = img.name if name is None else name
-    if mask is None:
-        if not isinstance(px, int) or px < 0:
-            raise ValueError("``px`` must be an integer >= 0")
-        if px == 0:
-            return img
-        mask = _mask_lookup[shape](px)
-    elif not (isinstance(mask, np.ndarray) and mask.ndim == 2 and
-              mask.shape[0] == mask.shape[1] and mask.shape[0] % 2 == 1):
-        raise ValueError("mask must be a square 2 dimensional ndarray with "
-                         "odd dimensions.")
-        mask = mask if mask.dtype == 'bool' else mask.astype('bool')
-    if how is None:
-        how = 'over' if is_image else 'add'
-
-    w = mask.shape[0]
-    extra = w // 2
-    M, N = img.shape[:2]
-    padded_shape = (M + 2*extra, N + 2*extra)
-    float_type = img.dtype in [np.float32, np.float64]
-    fill_value = np.nan if float_type else 0
-    if cupy and isinstance(img.data, cupy.ndarray):
-        # Convert img.data to numpy array before passing to nb.jit kernels
-        img.data = cupy.asnumpy(img.data)
-
-    if is_image:
-        kernel = _build_spread_kernel(how, is_image)
-    elif float_type:
-        kernel = _build_float_kernel(how, w)
-    else:
-        kernel = _build_int_kernel(how, w, img.dtype == np.uint32)
-
-    def apply_kernel(layer):
-        buf = np.full(padded_shape, fill_value, dtype=layer.dtype)
-        kernel(layer.data, mask, buf)
-        return buf[extra:-extra, extra:-extra].copy()
-
-    if len(img.shape)==2:
-        out = apply_kernel(img)
-    else:
-        out = np.dstack([apply_kernel(img[:,:,category])
-                        for category in range(img.shape[2])])
-
-    return img.__class__(out, dims=img.dims, coords=img.coords, name=name)
+    pass
 
 
 @tz.memoize
 def _build_int_kernel(how, mask_size, ignore_zeros):
     """Build a spreading kernel for a given composite operator"""
-    from datashader.composite import composite_op_lookup, validate_operator
-
-    validate_operator(how, is_image=False)
-    op = composite_op_lookup[how + "_arr"]
-    @ngjit
-    def stencilled(arr, mask, out):
-        M, N = arr.shape
-        for y in range(M):
-            for x in range(N):
-                el = arr[y, x]
-                for i in range(mask_size):
-                    for j in range(mask_size):
-                        if mask[i, j]:
-                            if ignore_zeros and el==0:
-                                result = out[i + y, j + x]
-                            elif ignore_zeros and out[i + y, j + x]==0:
-                                result = el
-                            else:
-                                result = op(el, out[i + y, j + x])
-                            out[i + y, j + x] = result
-    return stencilled
+    pass
 
 
 @tz.memoize
 def _build_float_kernel(how, mask_size):
     """Build a spreading kernel for a given composite operator"""
-    from datashader.composite import composite_op_lookup, validate_operator
-
-    validate_operator(how, is_image=False)
-    op = composite_op_lookup[how + "_arr"]
-    @ngjit
-    def stencilled(arr, mask, out):
-        M, N = arr.shape
-        for y in range(M):
-            for x in range(N):
-                el = arr[y, x]
-                for i in range(mask_size):
-                    for j in range(mask_size):
-                        if mask[i, j]:
-                            if np.isnan(el):
-                                result = out[i + y, j + x]
-                            elif np.isnan(out[i + y, j + x]):
-                                result = el
-                            else:
-                                result = op(el, out[i + y, j + x])
-                            out[i + y, j + x] = result
-    return stencilled
+    pass
 
 
 @tz.memoize
 def _build_spread_kernel(how, is_image):
     """Build a spreading kernel for a given composite operator"""
-    from datashader.composite import composite_op_lookup, validate_operator
-
-    validate_operator(how, is_image=True)
-    op = composite_op_lookup[how + ("" if is_image else "_arr")]
-
-    @ngjit
-    def kernel(arr, mask, out):
-        M, N = arr.shape
-        w = mask.shape[0]
-        for y in range(M):
-            for x in range(N):
-                el = arr[y, x]
-                # Skip if data is transparent
-                process_image = is_image and ((int(el) >> 24) & 255) # Transparent pixel
-                process_array = (not is_image) and (not np.isnan(el))
-                if process_image or process_array:
-                    for i in range(w):
-                        for j in range(w):
-                            # Skip if mask is False at this value
-                            if mask[i, j]:
-                                if el==0:
-                                    result = out[i + y, j + x]
-                                if out[i + y, j + x]==0:
-                                    result = el
-                                else:
-                                    result = op(el, out[i + y, j + x])
-                                out[i + y, j + x] = result
-    return kernel
+    pass
 
 
 def _square_mask(px):
     """Produce a square mask with sides of length ``2 * px + 1``"""
-    px = int(px)
-    w = 2 * px + 1
-    return np.ones((w, w), dtype='bool')
+    pass
 
 
 def _circle_mask(r):
     """Produce a circular mask with a diameter of ``2 * r + 1``"""
-    x = np.arange(-r, r + 1, dtype='i4')
-    return np.where(np.sqrt(x**2 + x[:, None]**2) <= r+0.5, True, False)
+    pass
 
 
 _mask_lookup = {'square': _square_mask,
@@ -971,36 +789,7 @@ def dynspread(img, threshold=0.5, max_px=3, shape='circle', how=None, name=None)
         pixels. Default of None uses 'over' operator for Image objects
         and 'add' operator otherwise.
     """
-    is_image = isinstance(img, Image)
-    if not 0 <= threshold <= 1:
-        raise ValueError("threshold must be in [0, 1]")
-    if not isinstance(max_px, int) or max_px < 0:
-        raise ValueError("max_px must be >= 0")
-    # Simple linear search. Not super efficient, but max_px is usually small.
-    float_type = img.dtype in [np.float32, np.float64]
-    if cupy and isinstance(img.data, cupy.ndarray):
-        # Convert img.data to numpy array before passing to nb.jit kernels
-        img.data = cupy.asnumpy(img.data)
-
-    px_=0
-    for px in range(1, max_px + 1):
-        px_=px
-        if is_image:
-            density = _rgb_density(img.data, px*2)
-        elif len(img.shape) == 2:
-            density = _array_density(img.data, float_type, px*2)
-        else:
-            masked = np.logical_not(np.isnan(img)) if float_type else (img != 0)
-            flat_mask = np.sum(masked, axis=2, dtype='uint32')
-            density = _array_density(flat_mask.data, False, px*2)
-        if density > threshold:
-            px_=px_-1
-            break
-
-    if px_>=1:
-        return spread(img, px_, shape=shape, how=how, name=name)
-    else:
-        return img
+    pass
 
 
 @nb.jit(nopython=True, nogil=True, cache=True)
@@ -1010,22 +799,7 @@ def _array_density(arr, float_type, px=1):
     The density is a number in [0, 1], and indicates the normalized mean number
     of non-empty pixels that have neighbors in the given px radius.
     """
-    M, N = arr.shape
-    cnt = has_neighbors = 0
-    for y in range(0, M):
-        for x in range(0, N):
-            el = arr[y, x]
-            if (float_type and not np.isnan(el)) or (not float_type and el!=0):
-                cnt += 1
-                neighbors = 0
-                for i in     range(max(0, y - px), min(y + px + 1, M)):
-                    for j in range(max(0, x - px), min(x + px + 1, N)):
-                        if ((float_type and not np.isnan(arr[i, j])) or
-                            (not float_type and arr[i, j] != 0)):
-                            neighbors += 1
-                if neighbors>1: # (excludes self)
-                    has_neighbors += 1
-    return has_neighbors/cnt if cnt else np.inf
+    pass
 
 
 @nb.jit(nopython=True, nogil=True, cache=True)
@@ -1035,17 +809,4 @@ def _rgb_density(arr, px=1):
     The density is a number in [0, 1], and indicates the normalized mean number
     of non-empty pixels that have neighbors in the given px radius.
     """
-    M, N = arr.shape
-    cnt = has_neighbors = 0
-    for y in range(0, M):
-        for x in range(0, N):
-            if (arr[y, x] >> 24) & 255:
-                cnt += 1
-                neighbors = 0
-                for i in     range(max(0, y - px), min(y + px + 1, M)):
-                    for j in range(max(0, x - px), min(x + px + 1, N)):
-                        if (arr[i, j] >> 24) & 255:
-                            neighbors += 1
-                if neighbors>1: # (excludes self)
-                    has_neighbors += 1
-    return has_neighbors/cnt if cnt else np.inf
+    pass

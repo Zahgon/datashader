@@ -44,19 +44,15 @@ class _GeometryLike(Glyph):
 
     @property
     def ndims(self):
-        return 1
+        pass
 
     @property
     def inputs(self):
-        return (self.geometry,)
+        pass
 
     @property
     def geom_dtypes(self):
-        if spatialpandas:
-            from spatialpandas.geometry import GeometryDtype
-            return (GeometryDtype,)
-        else:
-            return ()  # Empty tuple
+        pass
 
     def validate(self, in_dshape):
         if not isinstance(in_dshape[str(self.geometry)], self.geom_dtypes):
@@ -68,11 +64,11 @@ class _GeometryLike(Glyph):
 
     @property
     def x_label(self):
-        return 'x'
+        pass
 
     @property
     def y_label(self):
-        return 'y'
+        pass
 
     def required_columns(self):
         return [self.geometry]
@@ -119,11 +115,11 @@ class _PointLike(Glyph):
 
     @property
     def ndims(self):
-        return 1
+        pass
 
     @property
     def inputs(self):
-        return (self.x, self.y)
+        pass
 
     def validate(self, in_dshape):
         if not isreal(in_dshape.measure[str(self.x)]):
@@ -133,11 +129,11 @@ class _PointLike(Glyph):
 
     @property
     def x_label(self):
-        return self.x
+        pass
 
     @property
     def y_label(self):
-        return self.y
+        pass
 
     def required_columns(self):
         return [self.x, self.y]
@@ -215,10 +211,7 @@ class Point(_PointLike):
         @self.expand_aggs_and_cols(append)
         def extend_cuda(sx, tx, sy, ty, xmin, xmax, ymin, ymax, xs, ys,
                         xxmax, yymax, *aggs_and_cols):
-            i = cuda.grid(1)
-            if i < xs.shape[0]:
-                _perform_extend_points(i, sx, tx, sy, ty, xmin, xmax, ymin, ymax,
-                                       xs, ys, xxmax, yymax, *aggs_and_cols)
+            pass
 
         def extend(aggs, df, vt, bounds):
             yymax, xxmax = aggs[0].shape[:2]
@@ -246,8 +239,7 @@ class MultiPointGeoPandas(_GeometryLike):
     # geopandas must be available if a GeoPandasPointGeometry object is created.
     @property
     def geom_dtypes(self):
-        from geopandas.array import GeometryDtype
-        return (GeometryDtype,)
+        pass
 
     @memoize
     def _build_extend(
@@ -327,8 +319,7 @@ class MultiPointGeometry(_GeometryLike):
 
     @property
     def geom_dtypes(self):
-        from spatialpandas.geometry import PointDtype, MultiPointDtype
-        return PointDtype, MultiPointDtype
+        pass
 
     @memoize
     def _build_extend(self, x_mapper, y_mapper, info, append, _antialias_stage_2,

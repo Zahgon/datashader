@@ -87,28 +87,24 @@ def masked_clip_2d(data, mask, lower, upper):
 if Version(numba.__version__) >= Version("0.51.0"):
     @cuda.jit(device=True)
     def cuda_atomic_nanmin(ary, idx, val):
-        return cuda.atomic.nanmin(ary, idx, val)
+        pass
     @cuda.jit(device=True)
     def cuda_atomic_nanmax(ary, idx, val):
-        return cuda.atomic.nanmax(ary, idx, val)
+        pass
 elif Version(numba.__version__) <= Version("0.49.1"):
     @cuda.jit(device=True)
     def cuda_atomic_nanmin(ary, idx, val):
-        return cuda.atomic.min(ary, idx, val)
+        pass
     @cuda.jit(device=True)
     def cuda_atomic_nanmax(ary, idx, val):
-        return cuda.atomic.max(ary, idx, val)
+        pass
 else:
     raise ImportError("Datashader's CUDA support requires numba!=0.50.0")
 
 
 @cuda.jit
 def masked_clip_2d_kernel(data, mask, lower, upper):
-    i, j = cuda.grid(2)
-    maxi, maxj = data.shape
-    if i >= 0 and i < maxi and j >= 0 and j < maxj and not mask[i, j]:
-        cuda_atomic_nanmax(data, (i, j), lower)
-        cuda_atomic_nanmin(data, (i, j), upper)
+    pass
 
 
 def interp(x, xp, fp, left=None, right=None):
@@ -138,65 +134,26 @@ def interp(x, xp, fp, left=None, right=None):
 
 @cuda.jit
 def interp2d_kernel(x, xp, fp, left, right, output_y):
-    i, j = cuda.grid(2)
-    if i < x.shape[0] and j < x.shape[1]:
-        xval = x[i, j]
-
-        if isnan(xval):
-            output_y[i, j] = nan
-        elif xval < xp[0]:
-            output_y[i, j] = left
-        elif xval >= xp[-1]:
-            output_y[i, j] = right
-        else:
-            # Find indices of xp that straddle xval
-            upper_i = len(xp) - 1
-            lower_i = 0
-            while True:
-                stop_i = 1 + (lower_i + upper_i) // 2
-                if xp[stop_i] < xval:
-                    lower_i = stop_i
-                elif xp[stop_i - 1] > xval:
-                    upper_i = stop_i - 1
-                else:
-                    break
-
-            # Compute interpolate y value
-            x0 = xp[stop_i - 1]
-            x1 = xp[stop_i]
-            y0 = fp[stop_i - 1]
-            y1 = fp[stop_i]
-
-            slope = (y1 - y0) / (x1 - x0)
-            y_interp = y0 + slope * (xval - x0)
-
-            # Update output
-            output_y[i, j] = y_interp
+    pass
 
 
 if Version(numba.__version__) >= Version("0.57"):
     # See issues #1196 and #1211.
     @cuda.jit(device=True)
     def cuda_mutex_lock(mutex, index):
-        while cuda.atomic.cas(mutex, index, 0, 1) != 0:
-            pass
-        cuda.threadfence()
+        pass
 
     @cuda.jit(device=True)
     def cuda_mutex_unlock(mutex, index):
-        cuda.threadfence()
-        cuda.atomic.exch(mutex, index, 0)
+        pass
 else:
     @cuda.jit(device=True)
     def cuda_mutex_lock(mutex, index):
-        while cuda.atomic.compare_and_swap(mutex, 0, 1) != 0:
-              pass
-        cuda.threadfence()
+        pass
 
     @cuda.jit(device=True)
     def cuda_mutex_unlock(mutex, index):
-        cuda.threadfence()
-        cuda.atomic.exch(mutex, 0, 0)
+        pass
 
 
 @cuda.jit(device=True)
@@ -238,36 +195,21 @@ def _cuda_nanmax_n_impl(ret_pixel, other_pixel):
     inserted at a higher index, so this walks the two pixel arrays just once
     each.
     """
-    n = len(ret_pixel)
-    istart = 0
-    for other_value in other_pixel:
-        if isnan(other_value):
-            break
-        else:
-            for i in range(istart, n):
-                if isnan(ret_pixel[i]) or other_value > ret_pixel[i]:
-                    istart = cuda_shift_and_insert(ret_pixel, other_value, i)
-                    break
+    pass
 
 
 @cuda.jit
 def cuda_nanmax_n_in_place_4d(ret, other):
     """CUDA equivalent of nanmax_n_in_place_4d.
     """
-    ny, nx, ncat, _n = ret.shape
-    x, y, cat = cuda.grid(3)
-    if x < nx and y < ny and cat < ncat:
-        _cuda_nanmax_n_impl(ret[y, x, cat], other[y, x, cat])
+    pass
 
 
 @cuda.jit
 def cuda_nanmax_n_in_place_3d(ret, other):
     """CUDA equivalent of nanmax_n_in_place_3d.
     """
-    ny, nx, _n = ret.shape
-    x, y = cuda.grid(2)
-    if x < nx and y < ny:
-        _cuda_nanmax_n_impl(ret[y, x], other[y, x])
+    pass
 
 
 @cuda.jit(device=True)
@@ -280,47 +222,28 @@ def _cuda_nanmin_n_impl(ret_pixel, other_pixel):
     inserted at a higher index, so this walks the two pixel arrays just once
     each.
     """
-    n = len(ret_pixel)
-    istart = 0
-    for other_value in other_pixel:
-        if isnan(other_value):
-            break
-        else:
-            for i in range(istart, n):
-                if isnan(ret_pixel[i]) or other_value < ret_pixel[i]:
-                    istart = cuda_shift_and_insert(ret_pixel, other_value, i)
-                    break
+    pass
 
 
 @cuda.jit
 def cuda_nanmin_n_in_place_4d(ret, other):
     """CUDA equivalent of nanmin_n_in_place_4d.
     """
-    ny, nx, ncat, _n = ret.shape
-    x, y, cat = cuda.grid(3)
-    if x < nx and y < ny and cat < ncat:
-        _cuda_nanmin_n_impl(ret[y, x, cat], other[y, x, cat])
+    pass
 
 
 @cuda.jit
 def cuda_nanmin_n_in_place_3d(ret, other):
     """CUDA equivalent of nanmin_n_in_place_3d.
     """
-    ny, nx, _n = ret.shape
-    x, y = cuda.grid(2)
-    if x < nx and y < ny:
-        _cuda_nanmin_n_impl(ret[y, x], other[y, x])
+    pass
 
 
 @cuda.jit
 def cuda_row_min_in_place(ret, other):
     """CUDA equivalent of row_min_in_place.
     """
-    ny, nx, ncat = ret.shape
-    x, y, cat = cuda.grid(3)
-    if x < nx and y < ny and cat < ncat:
-        if other[y, x, cat] > -1 and (ret[y, x, cat] == -1 or other[y, x, cat] < ret[y, x, cat]):
-            ret[y, x, cat] = other[y, x, cat]
+    pass
 
 
 @cuda.jit(device=True)
@@ -333,36 +256,21 @@ def _cuda_row_max_n_impl(ret_pixel, other_pixel):
     inserted at a higher index, so this walks the two pixel arrays just once
     each.
     """
-    n = len(ret_pixel)
-    istart = 0
-    for other_value in other_pixel:
-        if other_value == -1:
-            break
-        else:
-            for i in range(istart, n):
-                if ret_pixel[i] == -1 or other_value > ret_pixel[i]:
-                    istart = cuda_shift_and_insert(ret_pixel, other_value, i)
-                    break
+    pass
 
 
 @cuda.jit
 def cuda_row_max_n_in_place_4d(ret, other):
     """CUDA equivalent of row_max_n_in_place_4d.
     """
-    ny, nx, ncat, _n = ret.shape
-    x, y, cat = cuda.grid(3)
-    if x < nx and y < ny and cat < ncat:
-        _cuda_row_max_n_impl(ret[y, x, cat], other[y, x, cat])
+    pass
 
 
 @cuda.jit
 def cuda_row_max_n_in_place_3d(ret, other):
     """CUDA equivalent of row_max_n_in_place_3d.
     """
-    ny, nx, _n = ret.shape
-    x, y = cuda.grid(2)
-    if x < nx and y < ny:
-        _cuda_row_max_n_impl(ret[y, x], other[y, x])
+    pass
 
 
 @cuda.jit(device=True)
@@ -375,33 +283,18 @@ def _cuda_row_min_n_impl(ret_pixel, other_pixel):
     inserted at a higher index, so this walks the two pixel arrays just once
     each.
     """
-    n = len(ret_pixel)
-    istart = 0
-    for other_value in other_pixel:
-        if other_value == -1:
-            break
-        else:
-            for i in range(istart, n):
-                if ret_pixel[i] == -1 or other_value < ret_pixel[i]:
-                    istart = cuda_shift_and_insert(ret_pixel, other_value, i)
-                    break
+    pass
 
 
 @cuda.jit
 def cuda_row_min_n_in_place_4d(ret, other):
     """CUDA equivalent of row_min_n_in_place_4d.
     """
-    ny, nx, ncat, _n = ret.shape
-    x, y, cat = cuda.grid(3)
-    if x < nx and y < ny and cat < ncat:
-        _cuda_row_min_n_impl(ret[y, x, cat], other[y, x, cat])
+    pass
 
 
 @cuda.jit
 def cuda_row_min_n_in_place_3d(ret, other):
     """CUDA equivalent of row_min_n_in_place_4=3d.
     """
-    ny, nx, _n = ret.shape
-    x, y = cuda.grid(2)
-    if x < nx and y < ny:
-        _cuda_row_min_n_impl(ret[y, x], other[y, x])
+    pass

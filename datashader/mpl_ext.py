@@ -17,21 +17,7 @@ __all__ = ["ScalarDSArtist", "CategoricalDSArtist", "alpha_colormap", "dsshow"]
 
 
 def to_ds_image(binned, rgba):
-    if binned.ndim == 2:
-        return tf.Image(uint8_to_uint32(rgba), coords=binned.coords, dims=binned.dims)
-    elif binned.ndim == 3:
-        return tf.Image(
-            uint8_to_uint32(rgba),
-            dims=binned.dims[:-1],
-            coords=dict(
-                [
-                    (binned.dims[1], binned.coords[binned.dims[1]]),
-                    (binned.dims[0], binned.coords[binned.dims[0]]),
-                ]
-            ),
-        )
-    else:
-        raise ValueError("Aggregate must be 2D or 3D.")
+    pass
 
 
 def compute_mask(binned):
@@ -63,23 +49,7 @@ def alpha_colormap(color, min_alpha=40, max_alpha=255, N=256):
     :class:`matplotlib.colors.LinearSegmentedColormap`
 
     """
-    for a in (min_alpha, max_alpha):
-        if a < 0 or a > 255:
-            raise ValueError("Alpha values must be integers between 0 and 255")
-    r, g, b = mpl.colors.to_rgb(color)
-    return mpl.colors.LinearSegmentedColormap(
-        "_datashader_alpha",
-        {
-            "red": [(0.0, r, r), (1.0, r, r)],
-            "green": [(0.0, g, g), (1.0, g, g)],
-            "blue": [(0.0, b, b), (1.0, b, b)],
-            "alpha": [
-                (0.0, min_alpha / 255, min_alpha / 255),
-                (1.0, max_alpha / 255, max_alpha / 255),
-            ],
-        },
-        N=N,
-    )
+    pass
 
 
 class EqHistNormalize(mpl.colors.Normalize):
@@ -143,28 +113,20 @@ class EqHistNormalize(mpl.colors.Normalize):
         return np.ma.masked_array(result, mask)
 
     def process_value(self, data):
-        if self._bin_edges is None:
-            raise ValueError("Not usable until eq_hist has been computed")
-        isscalar = np.isscalar(data)
-        data = np.array([data]) if isscalar else data
-        interped = np.interp(data, self._bin_edges, self._color_bins)
-        return interped, isscalar
+        pass
 
     def inverse(self, value):
-        if self._bin_edges is None:
-            raise ValueError("Not invertible until eq_hist has been computed")
-        return np.interp([value], self._color_bins, self._bin_edges)[0]
+        pass
 
     def autoscale(self, A):
-        super().autoscale(A)
-        self._bin_edges = self._binning(A, self._ncolors)
+        pass
 
     def autoscale_None(self, A):
         super().autoscale_None(A)
         self._bin_edges = self._binning(A, self._ncolors)
 
     def scaled(self):
-        return super().scaled() and self._bin_edges is not None
+        pass
 
 
 class DSArtist(_ImageBase):
@@ -218,27 +180,7 @@ class DSArtist(_ImageBase):
 
     def aggregate(self, x_range, y_range):
         """Aggregate data in given range to the window dimensions."""
-        dims = self.axes.patch.get_window_extent().bounds
-
-        if self.plot_width is None:
-            plot_width = int(int(dims[2] + 0.5) * self.width_scale)
-        else:
-            plot_width = self.plot_width
-
-        if self.plot_height is None:
-            plot_height = int(int(dims[3] + 0.5) * self.height_scale)
-        else:
-            plot_height = self.plot_height
-
-        canvas = Canvas(
-            plot_width=plot_width,
-            plot_height=plot_height,
-            x_range=x_range,
-            y_range=y_range,
-        )
-        binned = bypixel(self.df, canvas, self.glyph, self.aggregator)
-
-        return binned
+        pass
 
     def shade(self, binned):
         """Convert an aggregate into an RGBA array."""
@@ -262,82 +204,32 @@ class DSArtist(_ImageBase):
         trans : Affine2D
             The affine transformation from image to pixel space.
         """
-        x1, x2, y1, y2 = self.get_extent()
-        bbox = Bbox(np.array([[x1, y1], [x2, y2]]))
-
-        # Fail-fast if visible extent does not overlap with data extent
-        if not bbox.overlaps(self.bbox_df):
-            return None, 0, 0, None
-
-        trans = self.get_transform()
-        transformed_bbox = TransformedBbox(bbox, trans)
-
-        # Aggregate
-        binned = self.aggregate([x1, x2], [y1, y2])
-        if self.agg_hook is not None:
-            binned = self.agg_hook(binned)
-
-        self.set_ds_data(binned)
-
-        # Normalize and color to make an RGBA array
-        rgba = self.shade(binned)
-        if self.shade_hook is not None:
-            img = to_ds_image(binned, rgba)
-            img = self.shade_hook(img)
-            rgba = uint32_to_uint8(img.data)
-
-        self.set_array(rgba)
-
-        return self._make_image(
-            rgba,
-            bbox,
-            transformed_bbox,
-            self.axes.bbox,
-            magnification=magnification,
-            unsampled=unsampled,
-        )
+        pass
 
     def set_ds_data(self, binned):
         """
         Set the aggregate data for the bounding box currently displayed.
         Should be a :class:`xarray.DataArray`.
         """
-        self._ds_data = binned
+        pass
 
     def get_ds_data(self):
         """
         Return the aggregated, pre-shaded :class:`xarray.DataArray` backing the
         bounding box currently displayed.
         """
-        return self._ds_data
+        pass
 
     def get_extent(self):
         """Return the image extent as tuple (left, right, bottom, top)"""
-        (x1, x2), (y1, y2) = self.axes.get_xlim(), self.axes.get_ylim()
-        return x1, x2, y1, y2
+        pass
 
     def get_cursor_data(self, event):
         """
         Return the aggregated data at the event position or *None* if the
         event is outside the bounds of the current view.
         """
-        xmin, xmax, ymin, ymax = self.get_extent()
-        if self.origin == "upper":
-            ymin, ymax = ymax, ymin
-
-        arr = self.get_ds_data().data
-        data_extent = Bbox([[ymin, xmin], [ymax, xmax]])
-        array_extent = Bbox([[0, 0], arr.shape[:2]])
-        trans = BboxTransform(boxin=data_extent, boxout=array_extent)
-
-        y, x = event.ydata, event.xdata
-        i, j = trans.transform_point([y, x]).astype(int)
-
-        # Clip the coordinates at array bounds
-        if not (0 <= i < arr.shape[0]) or not (0 <= j < arr.shape[1]):
-            return None
-        else:
-            return arr[i, j]
+        pass
 
 
 class ScalarDSArtist(DSArtist):
@@ -412,12 +304,10 @@ class ScalarDSArtist(DSArtist):
         return self.to_rgba(A, bytes=True, norm=True)
 
     def get_ds_image(self):
-        binned = self.get_ds_data()
-        rgba = self.to_rgba(self.get_array(), bytes=True, norm=True)
-        return to_ds_image(binned, rgba)
+        pass
 
     def get_legend_elements(self):
-        return None
+        pass
 
 
 class CategoricalDSArtist(DSArtist):
@@ -481,24 +371,13 @@ class CategoricalDSArtist(DSArtist):
         return rgba
 
     def get_ds_image(self):
-        binned = self.get_ds_data()
-        rgba = self.get_array()
-        return to_ds_image(binned, rgba)
+        pass
 
     def get_legend_elements(self):
         """
         Return legend elements to display the color code for each category.
         """
-        if not isinstance(self._color_key, dict):
-            binned = self.get_ds_data()
-            categories = binned.coords[binned.dims[2]].data
-            color_dict = dict(zip(categories, self._color_key))
-        else:
-            color_dict = self._color_key
-        return [
-            Patch(facecolor=color, edgecolor="none", label=category)
-            for category, color in color_dict.items()
-        ]
+        pass
 
 
 def dsshow(

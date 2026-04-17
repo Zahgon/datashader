@@ -38,8 +38,7 @@ def _deprecated_pyct_wrapper(func):
     """Wrapper to add deprecation warning to pyct functions."""
     @wraps(func)  # noqa: F821
     def wrapper(*args, **kwargs):
-        _warn_pyct_deprecated(stacklevel=3)
-        return func(*args, **kwargs)
+        pass
     return wrapper
 
 
@@ -50,8 +49,7 @@ try:
     examples = _deprecated_pyct_wrapper(partial(_examples, 'datashader'))
 except ImportError:
     def _missing_cmd(*args,**kw):
-        return("install pyct to enable this command (e.g. `conda install pyct or "
-               "`pip install pyct[cmd]`)")
+        pass
     _copy = _fetch = _examples = _missing_cmd
     def err():
         raise ValueError(_missing_cmd())

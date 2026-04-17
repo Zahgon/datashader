@@ -112,115 +112,23 @@ class circular_layout(LayoutAlgorithm):
 
 
 def _extract_points_from_nodes(nodes, params, dtype=None, rng=None):
-    if rng is None:
-        rng = np.random.default_rng()
-
-    if params.x in nodes.columns and params.y in nodes.columns:
-        points = np.asarray(nodes[[params.x, params.y]])
-        if not points.flags.writeable: # Pandas 3's Copy-On-Write
-            points = points.copy()
-    else:
-        points = np.asarray(rng.random((len(nodes), params.dim)), dtype=dtype)
-    return points
+    pass
 
 
 def _convert_graph_to_sparse_matrix(nodes, edges, params, dtype=None, format='csr'):
-    nlen = len(nodes)
-    if params.id is not None and params.id in nodes:
-        index = dict(zip(nodes[params.id].values, range(nlen)))
-    else:
-        index = dict(zip(nodes.index.values, range(nlen)))
-
-    if params.weight and params.weight in edges:
-        edge_values = edges[[params.source, params.target, params.weight]].values
-        rows, cols, data = zip(*((index[src], index[dst], weight)
-                                 for src, dst, weight in edge_values
-                                 if src in index and dst in index))
-    else:
-        edge_values = edges[[params.source, params.target]].values
-        rows, cols, data = zip(*((index[src], index[dst], 1)
-                                 for src, dst in edge_values
-                                 if src in index and dst in index))
-
-    # Symmetrize matrix
-    d = data + data
-    r = rows + cols
-    c = cols + rows
-
-    # Check for nodes pointing to themselves
-    loops = edges[edges[params.source] == edges[params.target]]
-    if len(loops):
-        if params.weight and params.weight in edges:
-            loop_values = loops[[params.source, params.target, params.weight]].values
-            diag_index, diag_data = zip(*((index[src], -weight)
-                                          for src, dst, weight in loop_values
-                                          if src in index and dst in index))
-        else:
-            loop_values = loops[[params.source, params.target]].values
-            diag_index, diag_data = zip(*((index[src], -1)
-                                        for src, dst in loop_values
-                                        if src in index and dst in index))
-        d += diag_data
-        r += diag_index
-        c += diag_index
-
-    M = scipy.sparse.coo_matrix((d, (r, c)), shape=(nlen, nlen), dtype=dtype)
-    return M.asformat(format)
+    pass
 
 
 def _merge_points_with_nodes(nodes, points, params):
-    n = nodes.copy()
-    n[params.x] = points[:, 0]
-    n[params.y] = points[:, 1]
-    return n
+    pass
 
 def cooling(matrix, points, temperature, params):
-    matrix = matrix.toarray()
-    c_params = {
-        'iterations': params.iterations,
-        'dim': params.dim,
-        'k': params.k,
-        'nohubs': params.nohubs,
-        'linlog': params.linlog
-    }
-    _cooling(matrix, points, temperature, **c_params)
+    pass
 
 
 @nb.jit(nopython=True, nogil=True, parallel=True)
 def _cooling(matrix, points, temperature, iterations, dim, k, nohubs, linlog):
-    dt = temperature / float(iterations + 1)
-    displacement = np.zeros((dim, len(points)))
-    for iteration in range(iterations):
-        displacement *= 0
-        for i in nb.prange(matrix.shape[0]):
-            # difference between this row's node position and all others
-            delta = (points[i] - points).T
-
-            # distance between points
-            distance = np.sqrt((delta ** 2).sum(axis=0))
-
-            # enforce minimum distance of 0.01
-            distance = np.where(distance < 0.01, 0.01, distance)
-
-            # the adjacency matrix row
-            ai = matrix[i]
-
-            # displacement "force"
-            dist = k * k / distance ** 2
-
-            if nohubs:
-                dist = dist / float(ai.sum(axis=1) + 1)
-            if linlog:
-                dist = np.log(dist + 1)
-            displacement[:, i] += (delta * (dist - ai * distance / k)).sum(axis=1)
-
-        # update points
-        length = np.sqrt((displacement ** 2).sum(axis=0))
-        length = np.where(length < 0.01, 0.01, length)
-        points += (displacement * temperature / length).T
-
-        # cool temperature
-        temperature -= dt
+    pass
 
 
 class forceatlas2_layout(LayoutAlgorithm):

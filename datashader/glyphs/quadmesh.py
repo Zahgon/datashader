@@ -76,14 +76,7 @@ def _make_3d_from_2d(func, prefix_idx, parallel=True):
     decorator = ngjit_parallel if parallel else ngjit
 
     def factory_3d(n_arrays):
-        if n_arrays not in cache:
-            func_3d = _inner_make_3d_func_from_2d(
-                n_arrays=n_arrays,
-                func=func,
-                prefix_idx=prefix_idx
-            )
-            cache[n_arrays] = decorator(func_3d)
-        return cache[n_arrays]
+        pass
     return factory_3d
 
 
@@ -139,35 +132,7 @@ def _make_3d_from_2d_cuda(kernel_2d, prefix_idx):
         callable
             Wrapper function that launches 2D kernel in parallel streams for each z-slice.
         """
-        # Global stream pool for parallel 3D CUDA kernel launches
-        global _cuda_stream_pool
-        if _cuda_stream_pool is None:
-            _cuda_stream_pool = _CUDAStreamPool()
-
-        def wrapper(*args):
-            # Split args: prefix, nz, arrays
-            prefix_args = args[:prefix_idx]
-            nz = args[prefix_idx]
-            arrays = args[prefix_idx + 1:]
-
-            # Get grid configuration (blocks, threads_per_block)
-            grid_config = cuda_args(grid_shape)
-
-            # Get streams for parallelization
-            streams = _cuda_stream_pool.get_streams(nz)
-
-            # Launch in parallel streams
-            for z in range(nz):
-                stream_idx = z % len(streams)
-                z_arrays = tuple(arr[z] if arr.ndim == 3 else arr for arr in arrays)
-                # In Numba CUDA, pass stream as third element in kernel launcher config
-                kernel = kernel_2d[(*grid_config, streams[stream_idx])]
-                kernel(*prefix_args, *z_arrays)
-
-            # Synchronize all used streams
-            cuda.synchronize()
-
-        return wrapper
+        pass
 
     return factory_3d
 
@@ -180,10 +145,7 @@ def _cuda_mapper(mapper):
             out_array[i, j] = mapper(in_array[i, j])
 
     def cuda_map(in_array):
-        out_array = cupy.zeros(in_array.shape, dtype='float64')
-        in_array = cuda.to_device(in_array)
-        kernel[cuda_args(in_array.shape)](in_array, out_array)
-        return out_array
+        pass
 
     return cuda_map
 
@@ -196,11 +158,11 @@ class _QuadMeshLike(Glyph):
 
     @property
     def ndims(self):
-        return 2
+        pass
 
     @property
     def inputs(self):
-        return (self.x, self.y, self.name)
+        pass
 
     def validate(self, in_dshape):
         if not isreal(in_dshape.measure[str(self.x)]):
@@ -212,11 +174,11 @@ class _QuadMeshLike(Glyph):
 
     @property
     def x_label(self):
-        return self.x
+        pass
 
     @property
     def y_label(self):
-        return self.y
+        pass
 
     @staticmethod
     def _get_shape_info(aggs):
@@ -313,9 +275,7 @@ class QuadMeshRectilinear(_QuadMeshLike):
         @cuda.jit
         @self.expand_aggs_and_cols(append)
         def extend_cuda(xs, ys, shape, *aggs_and_cols):
-            i, j = cuda.grid(2)
-            if i < (xs.shape[0] - 1) and j < (ys.shape[0] - 1):
-                perform_extend(i, j, xs, ys, shape, *aggs_and_cols)
+            pass
 
         @ngjit
         @self.expand_aggs_and_cols(append)
@@ -489,28 +449,14 @@ class QuadMeshRaster(QuadMeshRectilinear):
                 src_w, src_h, translate_x, translate_y, scale_x, scale_y,
                 offset_x, offset_y, out_w, out_h, agg, col
         ):
-            for out_j in prange(out_h):
-                src_j = int(math.floor(scale_y * (out_j + 0.5) + translate_y - offset_y))
-                for out_i in range(out_w):
-                    src_i = int(math.floor(scale_x * (out_i + 0.5) + translate_x - offset_x))
-                    if src_j < 0 or src_j >= src_h or src_i < 0 or src_i >= src_w:
-                        agg[out_j, out_i] = np.nan
-                    else:
-                        agg[out_j, out_i] = col[src_j, src_i]
+            pass
 
         @cuda.jit
         def upsample_cuda(
                 src_w, src_h, translate_x, translate_y, scale_x, scale_y,
                 offset_x, offset_y, out_w, out_h, agg, col
         ):
-            out_i, out_j = cuda.grid(2)
-            if out_i < out_w and out_j < out_h:
-                src_j = int(math.floor(scale_y * (out_j + 0.5) + translate_y - offset_y))
-                src_i = int(math.floor(scale_x * (out_i + 0.5) + translate_x - offset_x))
-                if src_j < 0 or src_j >= src_h or src_i < 0 or src_i >= src_w:
-                    agg[out_j, out_i] = np.nan
-                else:
-                    agg[out_j, out_i] = col[src_j, src_i]
+            pass
 
         @ngjit_parallel
         @self.expand_aggs_and_cols(append)
@@ -518,29 +464,7 @@ class QuadMeshRaster(QuadMeshRectilinear):
                 src_w, src_h, translate_x, translate_y, scale_x, scale_y,
                 offset_x, offset_y, out_w, out_h, *aggs_and_cols
         ):
-            for out_j in prange(out_h):
-                # Calculate raw indices first
-                raw_j0 = math.floor(scale_y * (out_j + 0.0) + translate_y - offset_y)
-                raw_j1 = math.floor(scale_y * (out_j + 1.0) + translate_y - offset_y)
-
-                # Handle negative scale_y (descending coordinates) - swap before clamping
-                if scale_y < 0 and raw_j0 > raw_j1:
-                    raw_j0, raw_j1 = raw_j1, raw_j0
-
-                # Now clamp to valid range
-                src_j0 = int(max(raw_j0, 0))
-                src_j1 = int(min(raw_j1, src_h))
-
-                for out_i in range(out_w):
-                    src_i0 = int(max(
-                        math.floor(scale_x * (out_i + 0.0) + translate_x - offset_x), 0
-                    ))
-                    src_i1 = int(min(
-                        math.floor(scale_x * (out_i + 1.0) + translate_x - offset_x), src_w
-                    ))
-                    for src_j in range(src_j0, src_j1):
-                        for src_i in range(src_i0, src_i1):
-                            append(src_j, src_i, out_i, out_j, *aggs_and_cols)
+            pass
 
         @cuda.jit
         @self.expand_aggs_and_cols(append)
@@ -548,29 +472,7 @@ class QuadMeshRaster(QuadMeshRectilinear):
                 src_w, src_h, translate_x, translate_y, scale_x, scale_y,
                 offset_x, offset_y, out_w, out_h, *aggs_and_cols
         ):
-            out_i, out_j = cuda.grid(2)
-            if out_i < out_w and out_j < out_h:
-                # Calculate raw indices first
-                raw_j0 = math.floor(scale_y * (out_j + 0.0) + translate_y - offset_y)
-                raw_j1 = math.floor(scale_y * (out_j + 1.0) + translate_y - offset_y)
-
-                # Handle negative scale_y (descending coordinates) - swap before clamping
-                if scale_y < 0 and raw_j0 > raw_j1:
-                    raw_j0, raw_j1 = raw_j1, raw_j0
-
-                # Now clamp to valid range
-                src_j0 = max(raw_j0, 0)
-                src_j1 = min(raw_j1, src_h)
-
-                src_i0 = max(
-                    math.floor(scale_x * (out_i + 0.0) + translate_x - offset_x), 0
-                )
-                src_i1 = min(
-                    math.floor(scale_x * (out_i + 1.0) + translate_x - offset_x), src_w
-                )
-                for src_j in range(src_j0, src_j1):
-                    for src_i in range(src_i0, src_i1):
-                        append(src_j, src_i, out_i, out_j, *aggs_and_cols)
+            pass
 
         # We don't parallelize cpu since 2d funcs are already parallelized
         # and expect out_h >> z-dimension
@@ -838,29 +740,7 @@ class QuadMeshCurvilinear(_QuadMeshLike):
         def extend_cuda(plot_height, plot_width, xs, ys, *aggs_and_cols):
             # # For consistency with CPU path, we initialize all arrays here
             # # xverts/yverts arrays
-            xverts = cuda.local.array(5, dtype=numba.types.int32)
-            yverts = cuda.local.array(5, dtype=numba.types.int32)
-            #
-            # # Array holding whether each edge is increasing
-            # # vertically (+1), decreasing vertically (-1),
-            # # or horizontal (0).
-            yincreasing = cuda.local.array(4, dtype=numba.types.int8)
-
-            # # Array that will hold mask of whether edges are
-            # # eligible for intersection tests
-            eligible = cuda.local.array(4, dtype=numba.types.int8)
-
-            # # Array that will hold a mask of whether edges
-            # # intersect the ray to the right of test point
-            intersect = cuda.local.array(4, dtype=numba.types.int8)
-
-            i, j = cuda.grid(2)
-            if i < (xs.shape[0] - 1) and j < (ys.shape[0] - 1):
-                perform_extend(
-                    i, j, plot_height, plot_width, xs, ys,
-                    xverts, yverts, yincreasing, eligible, intersect,
-                    *aggs_and_cols
-                )
+            pass
 
         @ngjit
         @self.expand_aggs_and_cols(append)

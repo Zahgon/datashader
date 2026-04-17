@@ -18,13 +18,10 @@ class NameVisitor(ast.NodeVisitor):
         self.names = set()
 
     def visit_Name(self, node):
-        self.names.add(node.id)
+        pass
 
     def visit_arg(self, node):
-        if hasattr(node, 'arg'):
-            self.names.add(node.arg)
-        elif hasattr(node, 'id'):
-            self.names.add(node.id)
+        pass
 
     def get_new_names(self, num_names):
         """
@@ -76,10 +73,7 @@ class ExpandVarargTransformer(ast.NodeTransformer):
         self.expand_names = expand_names
 
     def visit_Starred(self, node):
-        if (value_id := getattr(node.value, "id", None)) and value_id == self.starred_name:
-            return [ast.Name(id=name, ctx=node.ctx) for name in
-                    self.expand_names]
-        return node
+        pass
 
 def function_to_ast(fn):
     """
@@ -100,8 +94,7 @@ def function_to_ast(fn):
 
 def ast_to_source(ast):
     """Convert AST to source code string using the astor package"""
-    import astor
-    return astor.to_source(ast)
+    pass
 
 
 def compile_function_ast(fn_ast):
@@ -267,7 +260,5 @@ def expand_varargs(expand_number):
         raise ValueError("expand_number must be a non-negative integer")
 
     def _expand_varargs(fn):
-        fn_ast = function_to_ast(fn)
-        fn_expanded_ast = expand_function_ast_varargs(fn_ast, expand_number)
-        return function_ast_to_function(fn_expanded_ast, stacklevel=2)
+        pass
     return _expand_varargs

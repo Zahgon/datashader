@@ -22,7 +22,7 @@ def dshapes(*args):
 
     >>> a, b = dshapes('3 * int32', '2 * var * float64')
     """
-    return [dshape(arg) for arg in args]
+    pass
 
 
 def dshape(o):
@@ -68,20 +68,7 @@ def cat_dshapes(dslist):
     >>> cat_dshapes(dshapes('10 * int32', '5 * int32'))
     dshape("15 * int32")
     """
-    if len(dslist) == 0:
-        raise ValueError('Cannot concatenate an empty list of dshapes')
-    elif len(dslist) == 1:
-        return dslist[0]
-
-    outer_dim_size = operator.index(dslist[0][0])
-    inner_ds = dslist[0][1:]
-    for ds in dslist[1:]:
-        outer_dim_size += operator.index(ds[0])
-        if ds[1:] != inner_ds:
-            raise ValueError('The datashapes to concatenate much'
-                              ' all match after'
-                              f' the first dimension ({inner_ds} vs {ds[1:]})')
-    return coretypes.DataShape(*[coretypes.Fixed(outer_dim_size)] + list(inner_ds))
+    pass
 
 
 def collect(pred, expr):

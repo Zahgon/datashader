@@ -14,8 +14,7 @@ except Exception:
 class GeopandasPolygonGeom(_GeometryLike):
     @property
     def geom_dtypes(self):
-        from geopandas.array import GeometryDtype
-        return (GeometryDtype,)
+        pass
 
     @memoize
     def _build_extend(self, x_mapper, y_mapper, info, append, _antialias_stage_2,
@@ -51,8 +50,7 @@ class PolygonGeom(_GeometryLike):
 
     @property
     def geom_dtypes(self):
-        from spatialpandas.geometry import PolygonDtype, MultiPolygonDtype
-        return PolygonDtype, MultiPolygonDtype
+        pass
 
     @memoize
     def _build_extend(self, x_mapper, y_mapper, info, append, _antialias_stage_2,

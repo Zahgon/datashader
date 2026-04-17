@@ -44,37 +44,7 @@ def _validate_ragged_properties(start_indices, flat_array):
     ValueError:
         if input arguments are invalid or incompatible properties
     """
-
-    # Validate start_indices
-    if (not isinstance(start_indices, np.ndarray) or
-            start_indices.dtype.kind != 'u' or
-            start_indices.ndim != 1):
-        raise ValueError(f"""
-The start_indices property of a RaggedArray must be a 1D numpy array of
-unsigned integers (start_indices.dtype.kind == 'u')
-    Received value of type {type(start_indices)}: {repr(start_indices)}""")
-
-    # Validate flat_array
-    if (not isinstance(flat_array, np.ndarray) or
-            flat_array.ndim != 1):
-        raise ValueError(f"""
-The flat_array property of a RaggedArray must be a 1D numpy array
-    Received value of type {type(flat_array)}: {repr(flat_array)}""")
-
-    # Validate start_indices values
-    # We don't need to check start_indices < 0 because we already know that it
-    # has an unsigned integer datatype
-    #
-    # Note that start_indices[i] == len(flat_array) is valid as it represents
-    # and empty array element at the end of the ragged array.
-    invalid_inds = start_indices > len(flat_array)
-
-    if invalid_inds.any():
-        some_invalid_vals = start_indices[invalid_inds[:10]]
-
-        raise ValueError(f"""
-Elements of start_indices must be less than the length of flat_array ({len(flat_array)})
-    Invalid values include: {repr(some_invalid_vals)}""")
+    pass
 
 
 # Internal ragged element array wrapper that provides
@@ -132,7 +102,7 @@ class RaggedDtype(ExtensionDtype):
 
     @property
     def name(self):
-        return f'Ragged[{self.subtype}]'
+        pass
 
     def __repr__(self):
         return self.name
@@ -143,22 +113,7 @@ class RaggedDtype(ExtensionDtype):
 
     @classmethod
     def construct_from_string(cls, string):
-        if not isinstance(string, str):
-            raise TypeError(f"'construct_from_string' expects a string, got {type(string)}")
-
-        # lowercase string
-        string = string.lower()
-
-        msg = "Cannot construct a 'RaggedDtype' from '{}'"
-        if string.startswith('ragged'):
-            # Extract subtype
-            try:
-                subtype_string = cls._parse_subtype(string)
-                return RaggedDtype(dtype=subtype_string)
-            except Exception:
-                raise TypeError(msg.format(string))
-        else:
-            raise TypeError(msg.format(string))
+        pass
 
     def __init__(self, dtype=np.float64):
         if isinstance(dtype, RaggedDtype):
@@ -168,7 +123,7 @@ class RaggedDtype(ExtensionDtype):
 
     @property
     def subtype(self):
-        return self._dtype
+        pass
 
     @classmethod
     def _parse_subtype(cls, dtype_string):
@@ -189,21 +144,11 @@ class RaggedDtype(ExtensionDtype):
         ValueError
             When the subtype cannot be extracted
         """
-        # Be case insensitive
-        dtype_string = dtype_string.lower()
-
-        match = cls._subtype_re.match(dtype_string)
-        if match:
-            subtype_string = match.groupdict()['subtype']
-        elif dtype_string == 'ragged':
-            subtype_string = 'float64'
-        else:
-            raise ValueError(f"Cannot parse {dtype_string}")
-        return subtype_string
+        pass
 
 
 def missing(v):
-    return v is None or (np.isscalar(v) and np.isnan(v))
+    pass
 
 
 class RaggedArray(ExtensionArray):
@@ -375,7 +320,7 @@ Cannot check equality of RaggedArray of length {len(self)} with:
         -------
         np.ndarray
         """
-        return self._flat_array
+        pass
 
     @property
     def start_indices(self):
@@ -388,7 +333,7 @@ Cannot check equality of RaggedArray of length {len(self)} with:
         -------
         np.ndarray
         """
-        return self._start_indices
+        pass
 
     def __len__(self):
         return len(self._start_indices)
@@ -481,19 +426,17 @@ Cannot check equality of RaggedArray of length {len(self)} with:
 
     @classmethod
     def _from_factorized(cls, values, original):
-        return RaggedArray(
-            [_RaggedElement.array_or_nan(v) for v in values],
-            dtype=original.flat_array.dtype)
+        pass
 
     def _as_ragged_element_array(self):
         return np.array([_RaggedElement.ragged_or_nan(self[i])
                          for i in range(len(self))])
 
     def _values_for_factorize(self):
-        return self._as_ragged_element_array(), np.nan
+        pass
 
     def _values_for_argsort(self):
-        return self._as_ragged_element_array()
+        pass
 
     def unique(self):
         from pandas import unique
@@ -549,23 +492,7 @@ Cannot check equality of RaggedArray of length {len(self)} with:
 
         # Note: this implementation assumes that `self.dtype.na_value` can be
         # stored in an instance of your ExtensionArray with `self.dtype`.
-        if not len(self) or periods == 0:
-            return self.copy()
-
-        if fill_value is None:
-            fill_value = np.nan
-
-        empty = self._from_sequence(
-            [fill_value] * min(abs(periods), len(self)),
-            dtype=self.dtype
-        )
-        if periods > 0:
-            a = empty
-            b = self[:-periods]
-        else:
-            a = self[abs(periods):]
-            b = empty
-        return self._concat_same_type([a, b])
+        pass
 
     def searchsorted(self, value, side="left", sorter=None):
         arr = self._as_ragged_element_array()
@@ -610,19 +537,7 @@ Invalid indices for take with allow_fill True: {invalid_inds[:9]}""")
     @classmethod
     def _concat_same_type(cls, to_concat):
         # concat flat_arrays
-        flat_array = np.hstack([ra.flat_array for ra in to_concat])
-
-        # offset and concat start_indices
-        offsets = np.hstack([
-            [0], np.cumsum([len(ra.flat_array) for ra in to_concat[:-1]])
-        ]).astype('uint64')
-
-        start_indices = np.hstack([ra.start_indices + offset
-                                   for offset, ra in zip(offsets, to_concat)])
-
-        return RaggedArray(dict(
-            flat_array=flat_array, start_indices=start_indices),
-            copy=False)
+        pass
 
     @property
     def dtype(self):
@@ -630,8 +545,7 @@ Invalid indices for take with allow_fill True: {invalid_inds[:9]}""")
 
     @property
     def nbytes(self):
-        return (self._flat_array.nbytes +
-                self._start_indices.nbytes)
+        pass
 
     def astype(self, dtype, copy=True):
         dtype = pandas_dtype(dtype)
@@ -661,8 +575,7 @@ Invalid indices for take with allow_fill True: {invalid_inds[:9]}""")
             return np.array(self, dtype=dtype)
 
     def duplicated(self, *args, **kwargs):
-        msg = "duplicated is not implemented for RaggedArray"
-        raise NotImplementedError(msg)
+        pass
 
 
 @jit(nopython=True, nogil=True)
@@ -690,37 +603,7 @@ def _eq_ragged_ragged(start_indices1,
         1D bool array of same length as inputs with elements True when
         corresponding elements are equal, False otherwise
     """
-    n = len(start_indices1)
-    m1 = len(flat_array1)
-    m2 = len(flat_array2)
-
-    result = np.zeros(n, dtype=np.bool_)
-
-    for i in range(n):
-        # Extract inds for ra1
-        start_index1 = start_indices1[i]
-        stop_index1 = start_indices1[i + 1] if i < n - 1 else m1
-        len_1 = stop_index1 - start_index1
-
-        # Extract inds for ra2
-        start_index2 = start_indices2[i]
-        stop_index2 = start_indices2[i + 1] if i < n - 1 else m2
-        len_2 = stop_index2 - start_index2
-
-        if len_1 != len_2:
-            el_equal = False
-        else:
-            el_equal = True
-            for flat_index1, flat_index2 in \
-                    zip(range(start_index1, stop_index1),
-                        range(start_index2, stop_index2)):
-                el_1 = flat_array1[flat_index1]
-                el_2 = flat_array2[flat_index2]
-                el_equal &= el_1 == el_2
-
-        result[i] = el_equal
-
-    return result
+    pass
 
 
 @jit(nopython=True, nogil=True)
@@ -742,24 +625,7 @@ def _eq_ragged_scalar(start_indices, flat_array, val):
         1D bool array of same length as inputs with elements True when
         ragged element equals scalar val, False otherwise.
     """
-    n = len(start_indices)
-    m = len(flat_array)
-    cols = len(val)
-    result = np.zeros(n, dtype=np.bool_)
-    for i in range(n):
-        start_index = start_indices[i]
-        stop_index = start_indices[i+1] if i < n - 1 else m
-
-        if stop_index - start_index != cols:
-            el_equal = False
-        else:
-            el_equal = True
-            for val_index, flat_index in \
-                    enumerate(range(start_index, stop_index)):
-                el_equal &= flat_array[flat_index] == val[val_index]
-        result[i] = el_equal
-
-    return result
+    pass
 
 
 def _eq_ragged_ndarray1d(start_indices, flat_array, a):
@@ -786,23 +652,7 @@ def _eq_ragged_ndarray1d(start_indices, flat_array, a):
     This function is not numba accelerated because it, by design, inputs
     a numpy object array
     """
-
-    n = len(start_indices)
-    m = len(flat_array)
-    result = np.zeros(n, dtype=np.bool_)
-    for i in range(n):
-        start_index = start_indices[i]
-        stop_index = start_indices[i + 1] if i < n - 1 else m
-        a_val = a[i]
-        if (a_val is None or
-                (np.isscalar(a_val) and np.isnan(a_val)) or
-                len(a_val) == 0):
-            result[i] = start_index == stop_index
-        else:
-            result[i] = np.array_equal(flat_array[start_index:stop_index],
-                                       a_val)
-
-    return result
+    pass
 
 
 @jit(nopython=True, nogil=True)
@@ -826,26 +676,7 @@ def _eq_ragged_ndarray2d(start_indices, flat_array, a):
         1D bool array of same length as input RaggedArray with elements True
         when corresponding elements of ra equal corresponding row of `a`
     """
-    n = len(start_indices)
-    m = len(flat_array)
-    cols = a.shape[1]
-
-    # np.bool is an alias for Python's built-in bool type, np.bool_ is the
-    # numpy type that numba recognizes
-    result = np.zeros(n, dtype=np.bool_)
-    for row in range(n):
-        start_index = start_indices[row]
-        stop_index = start_indices[row + 1] if row < n - 1 else m
-
-        # Check equality
-        if stop_index - start_index != cols:
-            el_equal = False
-        else:
-            el_equal = True
-            for col, flat_index in enumerate(range(start_index, stop_index)):
-                el_equal &= flat_array[flat_index] == a[row, col]
-        result[row] = el_equal
-    return result
+    pass
 
 
 @jit(nopython=True, nogil=True)
@@ -864,16 +695,11 @@ def _lexograph_lt(a1, a2):
     comparison:
         True if a1 < a2, False otherwise
     """
-    for e1, e2 in zip(a1, a2):
-        if e1 < e2:
-            return True
-        elif e1 > e2:
-            return False
-    return len(a1) < len(a2)
+    pass
 
 
 def ragged_array_non_empty(dtype):
-    return RaggedArray([[1], [1, 2]], dtype=dtype)
+    pass
 
 
 if make_array_nonempty:
