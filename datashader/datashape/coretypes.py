@@ -61,11 +61,14 @@ class Mono(metaclass=Type):
 
     @property
     def _slotted(self):
-        pass
+        return hasattr(self, '__slots__')
 
     @property
     def parameters(self):
-        pass
+        if self._slotted:
+            return tuple(getattr(self, slot) for slot in self.__slots__)
+        else:
+            return self._parameters
 
     def info(self):
         return type(self), self.parameters
@@ -87,7 +90,7 @@ class Mono(metaclass=Type):
 
     @property
     def shape(self):
-        pass
+        return ()
 
     def __len__(self):
         return 1
@@ -110,7 +113,7 @@ class Mono(metaclass=Type):
     # Monotypes are their own measure
     @property
     def measure(self):
-        pass
+        return self
 
     def subarray(self, leading):
         """Returns a data shape object of the subarray with 'leading'
@@ -558,7 +561,7 @@ class DataShape(Mono):
 
     @property
     def measure(self):
-        pass
+        return self.parameters[-1]
 
     def subarray(self, leading):
         """Returns a data shape object of the subarray with 'leading'

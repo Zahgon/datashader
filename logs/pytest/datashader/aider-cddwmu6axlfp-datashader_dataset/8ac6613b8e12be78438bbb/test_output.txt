@@ -1,0 +1,18 @@
+ImportError while loading conftest '/testbed/datashader/tests/conftest.py'.
+datashader/__init__.py:7: in <module>
+    from .core import Canvas                                 # noqa (API import)
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+datashader/core.py:13: in <module>
+    from .utils import Dispatcher, ngjit, calc_res, calc_bbox, orient_array, dshape_from_xarray_dataset
+datashader/utils.py:13: in <module>
+    import datashader.datashape as datashape
+datashader/datashape/__init__.py:8: in <module>
+    from .discovery import discover          # noqa (API import)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+datashader/datashape/discovery.py:302: in <module>
+    edges = groupby(lambda x: x[1], edges)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+datashader/datashape/internal_utils.py:114: in groupby
+    if key not in d:
+       ^^^^^^^^^^^^
+E   TypeError: unhashable type: 'TimeDelta'

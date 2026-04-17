@@ -1,0 +1,11 @@
+ImportError while loading conftest '/testbed/datashader/tests/conftest.py'.
+datashader/__init__.py:7: in <module>
+    from .core import Canvas                                 # noqa (API import)
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+datashader/core.py:13: in <module>
+    from .utils import Dispatcher, ngjit, calc_res, calc_bbox, orient_array, dshape_from_xarray_dataset
+datashader/utils.py:165: in <module>
+    from datashader.transfer_functions import Image
+datashader/transfer_functions/__init__.py:15: in <module>
+    from datashader.utils import ngjit, uint32_to_uint8, nansum_missing
+E   ImportError: cannot import name 'uint32_to_uint8' from partially initialized module 'datashader.utils' (most likely due to a circular import) (/testbed/datashader/utils.py)
